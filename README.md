@@ -1,50 +1,16 @@
-# Welcome to your Expo app 👋
+# Product Vision & Design Brief: Plantalk
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+1. The Vision & Purpose: Effortless Journaling, Gentle Growth
+The biggest barrier to a consistent journaling practice is friction. The effort of typing, organizing thoughts, and overcoming the blank page prevents many from starting and continuing.
 
-## Get started
+Plantalk is a voice-first journal designed to make capturing your thoughts as effortless and spontaneous as speaking. Its primary purpose is to help users build a consistent and rewarding habit of voice journaling. Modern transcription technology makes this possible, turning fleeting spoken words into a searchable, organized personal diary.
 
-1. Install dependencies
+To encourage this habit, Plantalk uses a simple, powerful motivator: a virtual plant companion. The plant is a metaphor for personal growth, but its core function is to serve as a gentle and effective reward and gamification system. When you journal, your plant thrives. When you're away, it gently droops, inviting you back to your practice without a sense of failure.
 
-   ```bash
-   npm install
-   ```
+The app's intentionally calm and quiet interface is also functional. A centered state of mind leads to clearer, more organized voice entries, improving the quality of the journal itself. Whether for self-care, therapeutic reflection, or capturing creative ideas, Plantalk provides the structure to ensure the habit sticks.
 
-2. Start the app
+2. The Core Experience: A Rewarding Ritual
+The user's journey is centered on a frictionless ritual. The daily interaction is simple: open the app, talk to your plant, and watch it grow. This positive feedback loop transforms journaling from a chore into a satisfying, two-minute daily practice. The user feels a sense of accomplishment and care, both for their plant and, by extension, for their own commitment to self-reflection.
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+3. The Design Language: Intentional Calm
+The visual style is minimalist, organic, and tactile. As seen in the mockups, it uses a muted color palette, soft shapes, and grainy textures to create a serene digital environment. This aesthetic is a deliberate choice to foster a calm headspace, conducive to both thoughtful reflection and coherent speaking.
