@@ -1,23 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Dimensions, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Easing,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { PlantEntry, usePlant } from '@/context/PlantProvider';
 import { theme } from '@/styles/theme';
-
-const { height: screenHeight } = Dimensions.get('window');
 
 interface SectionData {
   title: string;
@@ -26,8 +15,6 @@ interface SectionData {
 
 export default function HistoryScreen() {
   const { state } = usePlant();
-  const translateY = useSharedValue(0);
-  const scrollOffset = useSharedValue(0);
 
   // Group entries by date sections
   const sectionedEntries = useMemo(() => {
@@ -100,13 +87,7 @@ export default function HistoryScreen() {
   };
 
   const handleBack = () => {
-    // Smooth transition back to home
-    translateY.value = withTiming(screenHeight, {
-      duration: 300,
-      easing: Easing.out(Easing.quad),
-    }, () => {
-      runOnJS(router.back)();
-    });
+    router.back();
   };
 
   const formatDuration = (duration?: number): string => {
@@ -116,126 +97,74 @@ export default function HistoryScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatEntryTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  // Enhanced swipe down gesture for seamless return
-  const swipeGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      // Only allow swipe down when at the top of the list
-      if (event.translationY > 0 && scrollOffset.value <= 0) {
-        // Create resistance effect
-        const resistance = Math.min(event.translationY, screenHeight * 0.6);
-        translateY.value = resistance;
-      }
-    })
-    .onEnd((event) => {
-      if (event.translationY > 120 && event.velocityY > 600 && scrollOffset.value <= 0) {
-        // Swipe down detected - navigate back to home
-        handleBack();
-      } else {
-        // Spring back to original position
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 200,
-        });
-      }
-    });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      translateY.value,
-      [0, screenHeight * 0.3],
-      [1, 0.95],
-      'clamp'
-    );
-
-    return {
-      transform: [
-        { translateY: translateY.value },
-        { scale }
-      ],
-    };
-  });
-
-  const renderSectionHeader = ({ section }: { section: SectionData }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{section.title}</Text>
-    </View>
-  );
-
-  const renderEntryCard = ({ item }: { item: PlantEntry }) => (
-    <Pressable 
-      style={styles.entryCard}
-      onPress={() => handleEntryPress(item)}
-    >
-      <View style={styles.entryContent}>
-        <View style={styles.entryMain}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryTitle}>{item.title}</Text>
-            <Text style={styles.entryTime}>{formatEntryTime(item.date)}</Text>
-          </View>
-          <Text style={styles.entryPreview} numberOfLines={2}>
-            {item.transcription}
-          </Text>
-        </View>
-        <View style={styles.entryMeta}>
-          {item.duration && (
-            <Text style={styles.entryDuration}>{formatDuration(item.duration)}</Text>
-          )}
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.text + '40'} />
-        </View>
-      </View>
-    </Pressable>
-  );
-
   return (
     <ScreenWrapper>
-      <GestureDetector gesture={swipeGesture}>
-        <Animated.View style={[styles.container, animatedStyle]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable onPress={handleBack} style={styles.headerButton}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-            </Pressable>
-            <Text style={styles.headerTitle}>History</Text>
-            <Pressable style={styles.headerButton}>
-              <Ionicons name="search" size={24} color={theme.colors.text + '60'} />
-            </Pressable>
-          </View>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={handleBack} style={styles.headerButton}>
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>History</Text>
+          <Pressable style={styles.headerButton}>
+            <Ionicons name="search" size={24} color={theme.colors.text + '60'} />
+          </Pressable>
+        </View>
 
-          {/* Entries List */}
-          {sectionedEntries.length > 0 ? (
-            <SectionList
-              sections={sectionedEntries}
-              keyExtractor={(item) => item.id}
-              renderItem={renderEntryCard}
-              renderSectionHeader={renderSectionHeader}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              stickySectionHeadersEnabled={false}
-              bounces={false}
-              onScroll={(event) => {
-                scrollOffset.value = event.nativeEvent.contentOffset.y;
-              }}
-              scrollEventThrottle={16}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="book-outline" size={48} color={theme.colors.text + '30'} />
-              <Text style={styles.emptyStateText}>
-                No entries yet. Start your journaling journey!
-              </Text>
-            </View>
-          )}
-        </Animated.View>
-      </GestureDetector>
+        {/* Entries List */}
+        {sectionedEntries.length > 0 ? (
+          <Animated.ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            scrollEventThrottle={16}
+            bounces={true}
+            bouncesZoom={false}
+          >
+            {sectionedEntries.map((section) => (
+              <View key={section.title}>
+                {/* Section Header */}
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                </View>
+                
+                {/* Section Cards */}
+                <View style={styles.sectionCard}>
+                  {section.data.map((item, index) => {
+                    const isLast = index === section.data.length - 1;
+                    
+                    return (
+                      <React.Fragment key={item.id}>
+                        <Pressable 
+                          style={styles.entryItem}
+                          onPress={() => handleEntryPress(item)}
+                        >
+                          <View style={styles.entryHeader}>
+                            <Text style={styles.entryTitle} numberOfLines={1}>{item.title}</Text>
+                            {item.duration && (
+                              <Text style={styles.entryDuration}>{formatDuration(item.duration)}</Text>
+                            )}
+                          </View>
+                          <Text style={styles.entryPreview} numberOfLines={2}>
+                            {item.transcription}
+                          </Text>
+                        </Pressable>
+                        {!isLast && <View style={styles.entrySeparator} />}
+                      </React.Fragment>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </Animated.ScrollView>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="book-outline" size={48} color={theme.colors.text + '30'} />
+            <Text style={styles.emptyStateText}>
+              No entries yet. Start your journaling journey!
+            </Text>
+          </View>
+        )}
+      </View>
     </ScreenWrapper>
   );
 }
@@ -265,37 +194,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
+    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
   },
   sectionHeader: {
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
   },
   sectionTitle: {
     ...theme.typography.heading,
     color: theme.colors.text,
     fontWeight: '600',
   },
-  entryCard: {
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.xs,
+  sectionCard: {
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.sm,
+  },
+  entryItem: {
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 0.5,
-    borderBottomColor: theme.colors.text + '10',
   },
-  entryContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  entryMain: {
-    flex: 1,
-    marginRight: theme.spacing.md,
+  entrySeparator: {
+    height: 1,
+    backgroundColor: theme.colors.border + '40',
+    marginHorizontal: -theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   entryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: theme.spacing.xs,
   },
   entryTitle: {
@@ -305,28 +236,17 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: theme.spacing.sm,
   },
-  entryTime: {
-    ...theme.typography.caption,
-    color: theme.colors.text + '60',
-    fontSize: 13,
-  },
   entryPreview: {
     ...theme.typography.body,
     color: theme.colors.text + '70',
     lineHeight: 20,
     fontSize: 15,
   },
-  entryMeta: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    minHeight: 40,
-  },
   entryDuration: {
     ...theme.typography.caption,
     color: theme.colors.text + '50',
     fontFamily: 'SpaceMono',
     fontSize: 12,
-    marginBottom: theme.spacing.xs,
   },
   emptyState: {
     flex: 1,

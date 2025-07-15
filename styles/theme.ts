@@ -1,7 +1,7 @@
 export const theme = {
   colors: {
     primary: '#3A7A4C',      // Deep forest green
-    surface: '#E7E2C2',      // Warm cream background
+    surface: '#F2EDDB',      // Warm cream background F2EDDB E7E2C2
     text: '#243C2E',         // Dark green text
     accent: '#F0C274',       // Golden yellow accent
     secondary: '#90B494',    // Medium green

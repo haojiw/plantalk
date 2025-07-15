@@ -2,21 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { usePlant } from '@/context/PlantProvider';
 import { theme } from '@/styles/theme';
 
-type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading' | 'transcribing' | 'success' | 'error';
+type RecordingState = 'recording' | 'paused' | 'uploading' | 'transcribing' | 'success' | 'error';
 
 export default function RecordScreen() {
-  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [recordingState, setRecordingState] = useState<RecordingState>('recording');
   const [duration, setDuration] = useState(0);
   const [transcription, setTranscription] = useState('');
   const [audioUri, setAudioUri] = useState<string>('');
@@ -37,39 +37,69 @@ export default function RecordScreen() {
   const waveform8 = useSharedValue(0.3);
   const waveform9 = useSharedValue(0.3);
 
-  // Initialize audio permissions and setup
+  // Auto-start recording on mount
   useEffect(() => {
-    setupAudio();
+    const startRecordingAutomatically = async () => {
+      try {
+        // Request permissions
+        const { status } = await Audio.requestPermissionsAsync();
+        setHasPermission(status === 'granted');
+        
+        if (status !== 'granted') {
+          Alert.alert(
+            'Microphone Permission Required',
+            'This app needs microphone access to record your journal entries. Please enable microphone permissions in your device settings.',
+            [
+              { 
+                text: 'OK', 
+                onPress: () => router.back()
+              }
+            ]
+          );
+          return;
+        }
+
+        // Configure audio mode
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        // Start recording immediately
+        setDuration(0);
+        setRecordingState('recording');
+        
+        // Create new recording
+        recording.current = new Audio.Recording();
+        await recording.current.prepareToRecordAsync({
+          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          isMeteringEnabled: true, // Enable real-time audio level monitoring
+        });
+        
+        await recording.current.startAsync();
+        startMetering();
+      } catch (error) {
+        console.error('Error setting up audio or starting recording:', error);
+        Alert.alert(
+          'Recording Error',
+          'Unable to start recording. Please check your microphone permissions and try again.',
+          [
+            { 
+              text: 'OK', 
+              onPress: () => router.back()
+            }
+          ]
+        );
+        setRecordingState('error');
+      }
+    };
+
+    startRecordingAutomatically();
+    
     return () => {
       cleanupRecording();
     };
   }, []);
-
-  const setupAudio = async () => {
-    try {
-      // Request permissions
-      const { status } = await Audio.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please enable microphone access to record your journal entries.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      // Configure audio mode
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-    } catch (error) {
-      console.error('Error setting up audio:', error);
-      setRecordingState('error');
-    }
-  };
 
   const cleanupRecording = () => {
     if (meteringInterval.current) {
@@ -149,31 +179,6 @@ export default function RecordScreen() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleStartRecording = async () => {
-    if (!hasPermission) {
-      await setupAudio();
-      return;
-    }
-
-    try {
-      setDuration(0);
-      setRecordingState('recording');
-      
-      // Create new recording
-      recording.current = new Audio.Recording();
-      await recording.current.prepareToRecordAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: true, // Enable real-time audio level monitoring
-      });
-      
-      await recording.current.startAsync();
-      startMetering();
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      setRecordingState('error');
-    }
   };
 
   const handlePauseRecording = async () => {
@@ -304,14 +309,13 @@ export default function RecordScreen() {
           <Pressable onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Voice Journal</Text>
+          <View style={styles.headerSpacer} />
           <View style={styles.headerSpacer} />
         </View>
 
         {/* Status Display */}
         <View style={styles.statusContainer}>
           <Text style={styles.statusText}>
-            {recordingState === 'idle' && 'Ready to record'}
             {recordingState === 'recording' && 'Recording...'}
             {recordingState === 'paused' && 'Paused'}
             {recordingState === 'transcribing' && 'Transcribing...'}
@@ -337,6 +341,13 @@ export default function RecordScreen() {
             <Animated.View style={[styles.waveBar, waveAnimatedStyle8]} />
             <Animated.View style={[styles.waveBar, waveAnimatedStyle9]} />
           </View>
+          
+          {/* Plant Image */}
+          <Image 
+            source={require('@/assets/images/plant.png')} 
+            style={styles.plantImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Transcription Display */}
@@ -348,20 +359,14 @@ export default function RecordScreen() {
         )}
 
         {/* Controls */}
-        <View style={styles.controlsContainer}>
-          {recordingState === 'idle' && (
-            <Pressable onPress={handleStartRecording} style={styles.recordButton}>
-              <Ionicons name="mic" size={32} color={theme.colors.surface} />
-            </Pressable>
-          )}
-          
+        <View style={styles.controlsContainer}>          
           {recordingState === 'recording' && (
             <View style={styles.recordingControls}>
               <Pressable onPress={handlePauseRecording} style={styles.pauseButton}>
                 <Ionicons name="pause" size={28} color={theme.colors.surface} />
               </Pressable>
               <Pressable onPress={handleFinishRecording} style={styles.finishButton}>
-                <Ionicons name="stop" size={20} color={theme.colors.surface} />
+                <Ionicons name="checkmark" size={28} color={theme.colors.surface} />
               </Pressable>
             </View>
           )}
@@ -372,7 +377,7 @@ export default function RecordScreen() {
                 <Ionicons name="play" size={28} color={theme.colors.surface} />
               </Pressable>
               <Pressable onPress={handleFinishRecording} style={styles.finishButton}>
-                <Ionicons name="stop" size={20} color={theme.colors.surface} />
+                <Ionicons name="checkmark" size={28} color={theme.colors.surface} />
               </Pressable>
             </View>
           )}
@@ -392,16 +397,8 @@ export default function RecordScreen() {
           {recordingState === 'error' && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>
-                {!hasPermission 
-                  ? 'Microphone permission is required to record audio.'
-                  : 'An error occurred. Please try again.'
-                }
+                An error occurred while recording. Please try again.
               </Text>
-              {!hasPermission && (
-                <Pressable onPress={setupAudio} style={styles.retryButton}>
-                  <Text style={styles.retryButtonText}>Grant Permission</Text>
-                </Pressable>
-              )}
             </View>
           )}
         </View>
@@ -425,13 +422,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerTitle: {
-    ...theme.typography.heading,
-    color: theme.colors.text,
   },
   headerSpacer: {
     width: 44,
@@ -455,18 +448,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginVertical: theme.spacing.xxl,
+    width: '80%',
+    alignSelf: 'center',
   },
   waveform: {
+    width: '80%',
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-evenly',
     height: 120,
-    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xl,
   },
   waveBar: {
     width: 4,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.borderRadius.sm,
     minHeight: 8,
+  },
+  plantImage: {
+    width: 80,
+    height: 80,
+    opacity: 0.7,
   },
   transcriptionContainer: {
     backgroundColor: theme.colors.background,
@@ -489,25 +491,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: theme.spacing.xxl,
   },
-  recordButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...theme.shadows.lg,
-  },
   recordingControls: {
     flexDirection: 'row',
-    gap: theme.spacing.xl,
+    gap: theme.spacing.xxl,
     alignItems: 'center',
   },
   pauseButton: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: theme.colors.accent, // Yellow for pause
+    backgroundColor: theme.colors.primary, // Green for pause
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.md,
@@ -516,16 +509,16 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: theme.colors.primary, // Green for resume
+    backgroundColor: theme.colors.accent, // Yellow for resume
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.md,
   },
   finishButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.secondary, // Secondary color for finish
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: theme.colors.primary, // Green for finish
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.md,
@@ -559,16 +552,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: theme.spacing.md,
     lineHeight: 22,
-  },
-  retryButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-  },
-  retryButtonText: {
-    ...theme.typography.body,
-    color: theme.colors.surface,
-    fontWeight: '600',
   },
 }); 

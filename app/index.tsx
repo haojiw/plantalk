@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Dimensions, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     Easing,
@@ -237,14 +238,14 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: theme.borderRadius.xl,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.lg,
   },
   plantImage: {
-    width: 120,
-    height: 120,
+    width: 180,
+    height: 180,
   },
   bottomHint: {
     alignItems: 'center',
