@@ -20,11 +20,12 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <PlantProvider>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="history" options={{ headerShown: false }} />
             <Stack.Screen 
               name="record" 
               options={{ 
-                presentation: 'modal',
+                animation: 'fade',
                 headerShown: false,
               }} 
             />

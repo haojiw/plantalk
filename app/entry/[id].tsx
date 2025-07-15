@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { usePlant } from '@/context/PlantProvider';
@@ -22,7 +23,6 @@ export default function EntryDetailScreen() {
             <Pressable onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
             </Pressable>
-            <Text style={styles.headerTitle}>Entry</Text>
             <View style={styles.headerSpacer} />
           </View>
           
@@ -66,16 +66,26 @@ export default function EntryDetailScreen() {
     }
   };
 
+  const handleCopyText = async () => {
+    try {
+      await Clipboard.setStringAsync(entry.transcription);
+      Alert.alert('Copied', 'Transcription copied to clipboard');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to copy text');
+    }
+  };
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        {/* Header */}
+        {/* Minimalist Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Entry</Text>
-          <View style={styles.headerSpacer} />
+          <Pressable onPress={handleCopyText} style={styles.copyButton}>
+            <Ionicons name="copy-outline" size={24} color={theme.colors.text} />
+          </Pressable>
         </View>
 
         <ScrollView 
@@ -119,23 +129,20 @@ export default function EntryDetailScreen() {
             </View>
           )}
           
-          {/* Transcription */}
-          <View style={styles.transcriptionContainer}>
-            <Text style={styles.transcriptionLabel}>Transcription</Text>
-            <Text style={styles.transcriptionText}>{entry.transcription}</Text>
-          </View>
-          
-          {/* Growth insight */}
-          <View style={styles.insightContainer}>
-            <View style={styles.insightHeader}>
-              <Ionicons name="leaf" size={20} color={theme.colors.primary} />
-              <Text style={styles.insightTitle}>Growth Insight</Text>
+          {/* Summary (formerly Growth Insight) */}
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryHeader}>
+              <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} />
+              <Text style={styles.summaryTitle}>Summary</Text>
             </View>
-            <Text style={styles.insightText}>
+            <Text style={styles.summaryText}>
               This entry contributed to your {state.streak} day streak. 
               Keep reflecting to help your plant grow!
             </Text>
           </View>
+          
+          {/* Transcription as Body Text */}
+          <Text style={styles.transcriptionText}>{entry.transcription}</Text>
         </ScrollView>
       </View>
     </ScreenWrapper>
@@ -161,9 +168,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    ...theme.typography.heading,
-    color: theme.colors.text,
+  copyButton: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerSpacer: {
     width: 44,
@@ -226,44 +237,34 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceMono',
     marginLeft: theme.spacing.sm,
   },
-  transcriptionContainer: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.sm,
-  },
-  transcriptionLabel: {
-    ...theme.typography.subheading,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  transcriptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    lineHeight: 24,
-  },
-  insightContainer: {
+  summaryContainer: {
     backgroundColor: theme.colors.light + '40',
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.primary,
   },
-  insightHeader: {
+  summaryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-  insightTitle: {
+  summaryTitle: {
     ...theme.typography.subheading,
     color: theme.colors.text,
     marginLeft: theme.spacing.sm,
   },
-  insightText: {
+  summaryText: {
     ...theme.typography.body,
     color: theme.colors.text + '80',
     lineHeight: 20,
+  },
+  transcriptionText: {
+    ...theme.typography.body,
+    color: theme.colors.text,
+    lineHeight: 26,
+    fontSize: 16,
   },
   errorContainer: {
     flex: 1,

@@ -10,7 +10,6 @@ export interface PlantEntry {
 }
 
 export interface PlantState {
-  stage: number; // 0-4 (0 = seed, 4 = full plant)
   streak: number; // consecutive days
   lastEntryISO: string | null; // ISO date string of last entry
   entries: PlantEntry[];
@@ -19,7 +18,6 @@ export interface PlantState {
 interface PlantContextType {
   state: PlantState;
   addEntry: (entry: Omit<PlantEntry, 'id'>) => void;
-  getStageForStreak: (streak: number) => number;
   getDaysSinceLastEntry: () => number;
   resetStreak: () => void;
 }
@@ -27,7 +25,6 @@ interface PlantContextType {
 const PlantContext = createContext<PlantContextType | undefined>(undefined);
 
 const INITIAL_STATE: PlantState = {
-  stage: 0,
   streak: 0,
   lastEntryISO: null,
   entries: [],
@@ -39,15 +36,6 @@ interface PlantProviderProps {
 
 export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   const [state, setState] = useState<PlantState>(INITIAL_STATE);
-
-  // Calculate plant stage based on streak
-  const getStageForStreak = (streak: number): number => {
-    if (streak < 1) return 0;
-    if (streak < 7) return 1;
-    if (streak < 14) return 2;
-    if (streak < 21) return 3;
-    return 4; // Fully grown
-  };
 
   // Calculate days since last entry
   const getDaysSinceLastEntry = (): number => {
@@ -69,7 +57,6 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
       setState(prev => ({
         ...prev,
         streak: 0,
-        stage: 0,
       }));
     }
   };
@@ -102,8 +89,6 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
         }
       }
 
-      const newStage = getStageForStreak(newStreak);
-
       return {
         ...prev,
         entries: [...prev.entries, newEntry].sort(
@@ -111,7 +96,6 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
         ),
         lastEntryISO: entryData.date,
         streak: newStreak,
-        stage: newStage,
       };
     });
   };
@@ -120,7 +104,6 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     setState(prev => ({
       ...prev,
       streak: 0,
-      stage: 0,
     }));
   };
 
@@ -132,7 +115,6 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   const contextValue: PlantContextType = {
     state,
     addEntry,
-    getStageForStreak,
     getDaysSinceLastEntry,
     resetStreak,
   };
