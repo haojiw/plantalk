@@ -26,6 +26,14 @@ export const MasterGestureContainer: React.FC<MasterGestureContainerProps> = ({
   // Master pan gesture shared value
   const gestureTranslateY = useSharedValue(0);
   
+  // History scroll position reference
+  const historyScrollYRef = React.useRef<Animated.SharedValue<number> | undefined>(undefined);
+  
+  // Callback to receive scroll position from history component
+  const handleHistoryScrollYChange = React.useCallback((scrollY: Animated.SharedValue<number>) => {
+    historyScrollYRef.current = scrollY;
+  }, []);
+  
   // Master pan gesture implementation
   const masterPanGesture = Gesture.Pan()
     .onUpdate((event) => {
@@ -69,6 +77,43 @@ export const MasterGestureContainer: React.FC<MasterGestureContainerProps> = ({
       }
     });
 
+  // Scroll-aware gesture for history screen
+  const historySwipeGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Only allow downward swipes when in history view and specific conditions are met
+      const isInHistory = gestureTranslateY.value <= -screenHeight * 0.8;
+      const isScrollAtTop = (historyScrollYRef.current?.value ?? 0) <= 5;
+      const isDownwardSwipe = event.translationY > 0;
+      
+      if (isInHistory && isScrollAtTop && isDownwardSwipe) {
+        // Map downward swipe to returning to home
+        const progress = Math.min(event.translationY / (screenHeight * 0.3), 1);
+        gestureTranslateY.value = -screenHeight + (progress * screenHeight);
+      }
+    })
+    .onEnd((event) => {
+      const isInHistory = gestureTranslateY.value <= -screenHeight * 0.8;
+      const isScrollAtTop = (historyScrollYRef.current?.value ?? 0) <= 5;
+      const isDownwardSwipe = event.translationY > 0;
+      
+      if (isInHistory && isScrollAtTop && isDownwardSwipe && event.translationY > 50) {
+        // Threshold met - return to home screen
+        gestureTranslateY.value = withSpring(0, {
+          damping: 20,
+          stiffness: 300,
+        });
+      } else if (isInHistory) {
+        // Snap back to history screen
+        gestureTranslateY.value = withSpring(-screenHeight, {
+          damping: 20,
+          stiffness: 300,
+        });
+      }
+    });
+
+  // Combined gesture using Gesture.Race - history swipe takes priority when conditions are met
+  const combinedGesture = Gesture.Race(historySwipeGesture, masterPanGesture);
+
   // HomeScreen container animation (no opacity, just movement and visibility)
   const homeAnimatedStyle = useAnimatedStyle(() => {
     // Completely hide home screen when showing history
@@ -98,6 +143,7 @@ export const MasterGestureContainer: React.FC<MasterGestureContainerProps> = ({
   const historyStaggeredProps = {
     masterGestureValue: gestureTranslateY,
     entries,
+    onScrollYChange: handleHistoryScrollYChange,
   };
 
   // Provide master gesture value to home component
@@ -107,7 +153,7 @@ export const MasterGestureContainer: React.FC<MasterGestureContainerProps> = ({
 
   return (
     <ScreenWrapper>
-      <GestureDetector gesture={masterPanGesture}>
+      <GestureDetector gesture={combinedGesture}>
         <View style={styles.masterContainer}>
           {/* HomeScreen Container */}
           <Animated.View style={[styles.screenContainer, homeAnimatedStyle]}>
