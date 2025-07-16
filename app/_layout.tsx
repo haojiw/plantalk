@@ -5,10 +5,55 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PlantProvider } from '@/context/PlantProvider';
+import {
+  DMSans_400Regular,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
+
+import {
+  DMSerifDisplay_400Regular,
+} from '@expo-google-fonts/dm-serif-display';
+
+import {
+  Inter_400Regular,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
+
+import {
+  Manrope_400Regular,
+  Manrope_700Bold,
+} from '@expo-google-fonts/manrope';
+
+import {
+  Karla_400Regular,
+  Karla_700Bold,
+} from '@expo-google-fonts/karla';
+
+import {
+  Sora_400Regular,
+  Sora_600SemiBold,
+} from '@expo-google-fonts/sora';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // DM Sans fonts
+    DMSans_400Regular,
+    DMSans_700Bold,
+    // DM Serif Display fonts
+    DMSerifDisplay_400Regular,
+    // Inter fonts
+    Inter_400Regular,
+    Inter_700Bold,
+    // Manrope fonts
+    Manrope_400Regular,
+    Manrope_700Bold,
+    // Karla fonts
+    Karla_400Regular,
+    Karla_700Bold,
+    // Sora fonts
+    Sora_400Regular,
+    Sora_600SemiBold,
   });
 
   if (!loaded) {
