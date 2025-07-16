@@ -6,14 +6,16 @@ import React, { useMemo, useState } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  interpolate,
   runOnJS,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
-import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { PlantEntry, usePlant } from '@/context/PlantProvider';
 import { theme } from '@/styles/theme';
 
@@ -22,16 +24,64 @@ interface SectionData {
   data: PlantEntry[];
 }
 
+interface HistoryScreenContentProps {
+  masterGestureValue?: Animated.SharedValue<number>;
+  entries?: PlantEntry[];
+}
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function HistoryScreen() {
+export const HistoryScreenContent: React.FC<HistoryScreenContentProps> = ({
+  masterGestureValue,
+  entries: propEntries,
+}) => {
   const { state } = usePlant();
   const [previewEntry, setPreviewEntry] = useState<PlantEntry | null>(null);
+  
+  // Use prop entries if provided, otherwise use context entries
+  const entries = propEntries || state.entries;
   
   // Animation values
   const previewScale = useSharedValue(0);
   const previewOpacity = useSharedValue(0);
   const blurOpacity = useSharedValue(0);
+
+  // Scroll tracking
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useSharedValue(0);
+
+  // Scroll handler to track position
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  // Pan gesture for swipe down from anywhere
+  const swipeDownGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Allow downward swipes from anywhere, not just top
+      if (event.translationY > 0 && masterGestureValue) {
+        // Map the swipe to the master gesture value
+        const progress = Math.min(event.translationY / (screenHeight * 0.3), 1);
+        masterGestureValue.value = -screenHeight + (progress * screenHeight);
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationY > 50 && masterGestureValue) {
+        // Threshold met - return to home screen
+        masterGestureValue.value = withSpring(0, {
+          damping: 20,
+          stiffness: 300,
+        });
+      } else if (masterGestureValue) {
+        // Snap back to history screen
+        masterGestureValue.value = withSpring(-screenHeight, {
+          damping: 20,
+          stiffness: 300,
+        });
+      }
+    });
 
   // Group entries by date sections
   const sectionedEntries = useMemo(() => {
@@ -44,7 +94,7 @@ export default function HistoryScreen() {
     const sections: SectionData[] = [];
     const sectionMap = new Map<string, PlantEntry[]>();
 
-    state.entries.forEach(entry => {
+    entries.forEach(entry => {
       const entryDate = new Date(entry.date);
       const entryDateOnly = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate());
       
@@ -97,7 +147,7 @@ export default function HistoryScreen() {
     sections.push(...monthSections);
 
     return sections;
-  }, [state.entries]);
+  }, [entries]);
 
   const showPreview = (entry: PlantEntry) => {
     setPreviewEntry(entry);
@@ -119,7 +169,13 @@ export default function HistoryScreen() {
   };
 
   const handleBack = () => {
-    router.back();
+    // Instead of router.back(), animate back to home screen
+    if (masterGestureValue) {
+      masterGestureValue.value = withSpring(0, {
+        damping: 20,
+        stiffness: 300,
+      });
+    }
   };
 
   const formatDuration = (duration?: number): string => {
@@ -149,16 +205,74 @@ export default function HistoryScreen() {
     opacity: blurOpacity.value,
   }));
 
-  const EntryItem = ({ item, isLast }: { item: PlantEntry; isLast: boolean }) => {
+  // Staggered Entry Item Component with master gesture response
+  const EntryItem = ({ 
+    item, 
+    isLast, 
+    index, 
+    sectionIndex 
+  }: { 
+    item: PlantEntry; 
+    isLast: boolean; 
+    index: number;
+    sectionIndex: number;
+  }) => {
     const itemOpacity = useSharedValue(1);
+
+    // Calculate staggered delay based on position
+    const globalIndex = sectionIndex * 3 + index; // Approximate global position
+    const delayFactor = globalIndex * 0.02; // Reduced from 0.05 to 0.02 for faster reveals
+
+    // Staggered animation style based on master gesture
+    const staggeredAnimatedStyle = useAnimatedStyle(() => {
+      if (!masterGestureValue) {
+        // If no master gesture value, show content normally
+        return {
+          transform: [
+            { translateY: 0 },
+            { scale: 1 }
+          ],
+        };
+      }
+
+      // Simple staggered reveal based on screen position
+      const revealProgress = interpolate(
+        masterGestureValue.value,
+        [-screenHeight * 0.3, -screenHeight * 0.7],
+        [0, 1],
+        'clamp'
+      );
+
+      const adjustedProgress = Math.max(0, revealProgress - delayFactor);
+
+      const translateY = interpolate(
+        adjustedProgress,
+        [0, 1],
+        [20, 0],
+        'clamp'
+      );
+
+      const scale = interpolate(
+        adjustedProgress,
+        [0, 1],
+        [0.95, 1],
+        'clamp'
+      );
+
+      return {
+        transform: [
+          { translateY },
+          { scale }
+        ],
+      };
+    });
 
     const itemAnimatedStyle = useAnimatedStyle(() => ({
       transform: [{ scale: itemOpacity.value === 1 ? 1 : 0.98 }],
-      opacity: itemOpacity.value,
     }));
 
     const tapGesture = Gesture.Tap()
-      .maxDistance(10) // Prevent firing while scrolling
+      .maxDistance(10)
       .onBegin(() => {
         itemOpacity.value = withTiming(0.7, { duration: 100 });
       })
@@ -176,9 +290,6 @@ export default function HistoryScreen() {
       .onStart(() => {
         runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
         runOnJS(showPreview)(item);
-      })
-      .onEnd(() => {
-        // No need to call hidePreview here, it's handled by the blur background press
       });
 
     const composedGesture = Gesture.Exclusive(longPressGesture, tapGesture);
@@ -186,7 +297,13 @@ export default function HistoryScreen() {
     return (
       <React.Fragment>
         <GestureDetector gesture={composedGesture}>
-          <Animated.View style={[styles.entryItem, itemAnimatedStyle]}>
+          <Animated.View 
+            style={[
+              styles.entryItem, 
+              itemAnimatedStyle, 
+              staggeredAnimatedStyle
+            ]}
+          >
             <View style={styles.entryHeader}>
               <Text style={styles.entryTitle} numberOfLines={1}>
                 {item.title}
@@ -205,20 +322,42 @@ export default function HistoryScreen() {
     );
   };
 
+  // Header animation based on master gesture
+  const headerAnimatedStyle = useAnimatedStyle(() => {
+    if (!masterGestureValue) {
+      // If no master gesture value, show header normally
+      return {
+        transform: [{ translateY: 0 }],
+      };
+    }
+
+    // Simple header reveal animation
+    const translateY = interpolate(
+      masterGestureValue.value,
+      [-screenHeight * 0.2, -screenHeight * 0.6],
+      [20, 0],
+      'clamp'
+    );
+
+    return {
+      transform: [{ translateY }],
+    };
+  });
+
   return (
-    <View style={{ flex: 1 }}>
-      <ScreenWrapper>
+    <GestureDetector gesture={swipeDownGesture}>
+      <View style={{ flex: 1 }}>        
         <View style={styles.container}>
           {/* Header */}
-          <View style={styles.header}>
+          <Animated.View style={[styles.header, headerAnimatedStyle]}>
             <Pressable onPress={handleBack} style={styles.headerButton}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+              <Ionicons name="chevron-down" size={24} color={theme.colors.text} />
             </Pressable>
             <Text style={styles.headerTitle}>History</Text>
             <Pressable style={styles.headerButton}>
               <Ionicons name="search" size={24} color={theme.colors.text + '60'} />
             </Pressable>
-          </View>
+          </Animated.View>
 
           {/* Entries List */}
           {sectionedEntries.length > 0 ? (
@@ -227,8 +366,11 @@ export default function HistoryScreen() {
               contentContainerStyle={styles.listContent}
               scrollEventThrottle={16}
               bounces={true}
-              bouncesZoom={false}>
-              {sectionedEntries.map((section) => (
+              bouncesZoom={false}
+              ref={scrollRef}
+              onScroll={scrollHandler}
+              scrollEnabled={true}>
+              {sectionedEntries.map((section, sectionIndex) => (
                 <View key={section.title}>
                   {/* Section Header */}
                   <View style={styles.sectionHeader}>
@@ -239,7 +381,15 @@ export default function HistoryScreen() {
                   <View style={styles.sectionCard}>
                     {section.data.map((item, index) => {
                       const isLast = index === section.data.length - 1;
-                      return <EntryItem key={item.id} item={item} isLast={isLast} />;
+                      return (
+                        <EntryItem 
+                          key={item.id} 
+                          item={item} 
+                          isLast={isLast} 
+                          index={index}
+                          sectionIndex={sectionIndex}
+                        />
+                      );
                     })}
                   </View>
                 </View>
@@ -254,50 +404,51 @@ export default function HistoryScreen() {
             </View>
           )}
         </View>
-      </ScreenWrapper>
 
-      {/* Preview Overlay */}
-      {previewEntry && (
-        <>
-          <Animated.View style={[styles.blurContainer, blurAnimatedStyle]}>
-            <BlurView intensity={20} style={StyleSheet.absoluteFill}>
-              <Pressable style={styles.blurPressable} onPress={hidePreview} />
-            </BlurView>
-          </Animated.View>
+        {/* Preview Overlay */}
+        {previewEntry && (
+          <>
+            <Animated.View style={[styles.blurContainer, blurAnimatedStyle]}>
+              <BlurView intensity={20} style={StyleSheet.absoluteFill}>
+                <Pressable style={styles.blurPressable} onPress={hidePreview} />
+              </BlurView>
+            </Animated.View>
 
-          <Animated.View
-            style={[styles.previewContainer, previewAnimatedStyle]}
-            pointerEvents="none">
-            <View style={styles.previewCard}>
-              <View style={styles.previewHeader}>
-                <Text style={styles.previewTitle} numberOfLines={2}>
-                  {previewEntry.title}
-                </Text>
-                <Text style={styles.previewDate}>{formatEntryDate(previewEntry.date)}</Text>
-                {previewEntry.duration && (
-                  <Text style={styles.previewDuration}>
-                    {formatDuration(previewEntry.duration)}
+            <Animated.View
+              style={[styles.previewContainer, previewAnimatedStyle]}
+              pointerEvents="none">
+              <View style={styles.previewCard}>
+                <View style={styles.previewHeader}>
+                  <Text style={styles.previewTitle} numberOfLines={2}>
+                    {previewEntry.title}
                   </Text>
-                )}
+                  <Text style={styles.previewDate}>{formatEntryDate(previewEntry.date)}</Text>
+                  {previewEntry.duration && (
+                    <Text style={styles.previewDuration}>
+                      {formatDuration(previewEntry.duration)}
+                    </Text>
+                  )}
+                </View>
+                <ScrollView
+                  style={styles.previewContent}
+                  contentContainerStyle={styles.previewContentContainer}
+                  showsVerticalScrollIndicator={true}
+                  bounces={true}>
+                  <Text style={styles.previewText}>{previewEntry.transcription}</Text>
+                </ScrollView>
               </View>
-              <ScrollView
-                style={styles.previewContent}
-                contentContainerStyle={styles.previewContentContainer}
-                showsVerticalScrollIndicator={true}
-                bounces={true}>
-                <Text style={styles.previewText}>{previewEntry.transcription}</Text>
-              </ScrollView>
-            </View>
-          </Animated.View>
-        </>
-      )}
-    </View>
+            </Animated.View>
+          </>
+        )}
+      </View>
+    </GestureDetector>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -320,7 +471,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
   },
   sectionHeader: {
@@ -385,16 +535,14 @@ const styles = StyleSheet.create({
     color: theme.colors.text + '60',
     textAlign: 'center',
     marginTop: theme.spacing.md,
-    lineHeight: 22,
   },
-  // Preview Overlay Styles
   blurContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1000,
+    zIndex: 100,
   },
   blurPressable: {
     flex: 1,
@@ -408,52 +556,45 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    zIndex: 1001,
+    zIndex: 101,
   },
   previewCard: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
+    maxWidth: screenWidth - theme.spacing.xl,
     maxHeight: screenHeight * 0.7,
-    minHeight: screenHeight * 0.3,
     width: '100%',
-    maxWidth: screenWidth - theme.spacing.lg * 2,
     ...theme.shadows.lg,
   },
   previewHeader: {
     marginBottom: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border + '20',
   },
   previewTitle: {
     ...theme.typography.title,
     color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
     fontWeight: '600',
-    marginBottom: theme.spacing.xs,
   },
   previewDate: {
-    ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    ...theme.typography.body,
+    color: theme.colors.text + '70',
     marginBottom: theme.spacing.xs,
   },
   previewDuration: {
     ...theme.typography.caption,
     color: theme.colors.text + '50',
     fontFamily: 'SpaceMono',
-    fontSize: 12,
   },
   previewContent: {
     flex: 1,
-    minHeight: 100,
   },
   previewContentContainer: {
-    paddingBottom: theme.spacing.lg, // Add padding to the bottom of the ScrollView content
+    paddingBottom: theme.spacing.md,
   },
   previewText: {
     ...theme.typography.body,
     color: theme.colors.text,
-    lineHeight: 22,
-    fontSize: 16,
+    lineHeight: 24,
   },
 }); 

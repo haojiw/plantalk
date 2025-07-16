@@ -66,7 +66,6 @@ export default function RootLayout() {
         <PlantProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="history" options={{ headerShown: false }} />
             <Stack.Screen 
               name="record" 
               options={{ 

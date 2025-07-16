@@ -55,6 +55,11 @@ export default function EntryDetailScreen() {
     };
   }, [sound]);
 
+  // Update progress position when playback changes
+  useEffect(() => {
+    progressPosition.value = playbackProgress;
+  }, [playbackProgress, progressPosition]);
+
   // Enhanced date animation that can hide again when scrolling down
   const dateAnimatedStyle = useAnimatedStyle(() => {
     const pullOpacity = interpolate(
@@ -82,26 +87,42 @@ export default function EntryDetailScreen() {
     };
   });
 
-  if (!entry) {
-    return (
-      <ScreenWrapper>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-            </Pressable>
-            <View style={styles.headerSpacer} />
-          </View>
-          
-          <View style={styles.errorContainer}>
-            <Ionicons name="leaf-outline" size={48} color={theme.colors.primary + '40'} />
-            <Text style={styles.errorText}>Entry not found</Text>
-          </View>
-        </View>
-      </ScreenWrapper>
-    );
-  }
+  // Modern Gesture API for draggable slider
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      // Store playing state and pause audio while dragging
+      if (entry && isPlaying) {
+        runOnJS(setWasPlayingBeforeDrag)(isPlaying);
+        runOnJS(pauseAudio)();
+      }
+    })
+    .onUpdate((event) => {
+      // Using a more reliable width calculation
+      const containerWidth = 250; // Approximate progress container width
+      const newProgress = Math.max(0, Math.min(1, event.x / containerWidth));
+      progressPosition.value = newProgress;
+      runOnJS(setPlaybackProgress)(newProgress);
+    })
+    .onEnd(() => {
+      // Seek to new position and resume if was playing
+      if (entry) {
+        runOnJS(seekToPosition)(progressPosition.value);
+        if (wasPlayingBeforeDrag) {
+          runOnJS(resumeAudio)();
+        }
+      }
+    });
 
+  const progressAnimatedStyle = useAnimatedStyle(() => ({
+    width: `${progressPosition.value * 100}%`,
+  }));
+
+  const thumbAnimatedStyle = useAnimatedStyle(() => ({
+    left: `${progressPosition.value * 100}%`,
+    transform: [{ translateX: -8 }], // Half the thumb width to center it
+  }));
+
+  // All utility functions
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -154,9 +175,9 @@ export default function EntryDetailScreen() {
   };
 
   const handlePlayPause = async () => {
+    if (!entry?.audioUri) return;
+    
     try {
-      if (!entry.audioUri) return;
-
       if (isFinished) {
         // Replay from start
         if (sound) {
@@ -215,6 +236,7 @@ export default function EntryDetailScreen() {
   };
 
   const handleCopyText = async () => {
+    if (!entry) return;
     try {
       await Clipboard.setStringAsync(entry.transcription);
       Alert.alert('Copied', 'Transcription copied to clipboard');
@@ -227,43 +249,26 @@ export default function EntryDetailScreen() {
     // Empty function for now as requested
   };
 
-  // Modern Gesture API for draggable slider
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      // Store playing state and pause audio while dragging
-      runOnJS(setWasPlayingBeforeDrag)(isPlaying);
-      if (isPlaying) {
-        runOnJS(pauseAudio)();
-      }
-    })
-    .onUpdate((event) => {
-      // Using a more reliable width calculation
-      const containerWidth = 250; // Approximate progress container width
-      const newProgress = Math.max(0, Math.min(1, event.x / containerWidth));
-      progressPosition.value = newProgress;
-      runOnJS(setPlaybackProgress)(newProgress);
-    })
-    .onEnd(() => {
-      // Seek to new position and resume if was playing
-      runOnJS(seekToPosition)(progressPosition.value);
-      if (wasPlayingBeforeDrag) {
-        runOnJS(resumeAudio)();
-      }
-    });
-
-  const progressAnimatedStyle = useAnimatedStyle(() => ({
-    width: `${progressPosition.value * 100}%`,
-  }));
-
-  const thumbAnimatedStyle = useAnimatedStyle(() => ({
-    left: `${progressPosition.value * 100}%`,
-    transform: [{ translateX: -8 }], // Half the thumb width to center it
-  }));
-
-  // Update progress position when playback changes
-  React.useEffect(() => {
-    progressPosition.value = playbackProgress;
-  }, [playbackProgress]);
+  // Early return after all hooks
+  if (!entry) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+            </Pressable>
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <View style={styles.errorContainer}>
+            <Ionicons name="leaf-outline" size={48} color={theme.colors.primary + '40'} />
+            <Text style={styles.errorText}>Entry not found</Text>
+          </View>
+        </View>
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
