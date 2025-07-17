@@ -79,15 +79,13 @@ class GeminiService {
 
 TASK:
 1. Create a meaningful 2-5 word title capturing the main theme
-2. Format into proper paragraphs with good flow
-3. Fix transcription errors (misheard words, missing punctuation, excessive filler words)
-4. Preserve the speaker's authentic voice and tone
+2. Fix transcription errors (misheard words, missing punctuation, excessive filler words)
+3. Always preserve the speaker's authentic voice and tone
+4. For long texts, format the text into proper paragraphs with good flow, optionallyadd subheading when appropriate
 
-CRITICAL CONSTRAINTS:
-- Use original language - no translation
+CRITICAL CONSTRAINTS: apply MINIMAL changes to the original text
+- Use original language from the text, strictly no translation
 - Keep all personal expressions and unique phrasing  
-- Do not add new content or interpretations
-- Maintain emotional tone and perspective
 
 Original transcription:
 "${rawText}"
