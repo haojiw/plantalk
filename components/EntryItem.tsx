@@ -41,6 +41,23 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   const rowOpacity = useSharedValue(1); // For delete animation
   const processingPulse = useSharedValue(1); // For processing indicator animation
 
+  // Helper function to get appropriate preview text based on processing stage
+  const getPreviewText = (entry: PlantEntry) => {
+    if (entry.processingStage === 'transcribing') {
+      return 'Transcribing audio...';
+    } else if (entry.processingStage === 'refining') {
+      return 'Refining text...';
+    } else if (entry.processingStage === 'transcribing_failed') {
+      return 'Transcription failed. Please try again.';
+    } else if (entry.processingStage === 'refining_failed') {
+      return entry.text || 'Refinement failed, but transcription available.';
+    } else if (entry.processingStage === 'completed' && entry.text) {
+      return entry.text;
+    } else {
+      return 'No transcription available.';
+    }
+  };
+
   // Handle external close triggers (when another entry is opened or outside interaction)
   useEffect(() => {
     if (swipedEntryId !== item.id && translateX.value !== 0) {
@@ -51,7 +68,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
 
   // Start processing animation if entry is being processed
   useEffect(() => {
-    if (item.transcriptionStatus === 'processing') {
+    if (item.processingStage && item.processingStage !== 'completed') {
       processingPulse.value = withRepeat(
         withTiming(0.6, { duration: 800 }), 
         -1, 
@@ -60,7 +77,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
     } else {
       processingPulse.value = withTiming(1, { duration: 300 });
     }
-  }, [item.transcriptionStatus]);
+  }, [item.processingStage]);
 
   const rowAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scaleY: rowHeight.value }],
@@ -211,19 +228,26 @@ export const EntryItem: React.FC<EntryItemProps> = ({
                   {item.title}
                 </Text>
                 <View style={styles.entryHeaderRight}>
-                  {/* Processing indicator */}
-                  {item.transcriptionStatus === 'processing' && (
+                  {/* Processing/Error indicators */}
+                  {item.processingStage === 'transcribing' || item.processingStage === 'refining' ? (
+                    // Show animated processing indicator
                     <Animated.View style={[styles.processingIndicator, processingAnimatedStyle]}>
                       <Ionicons name="ellipsis-horizontal" size={12} color={theme.colors.primary} />
                     </Animated.View>
-                  )}
+                  ) : (item.processingStage === 'transcribing_failed' || item.processingStage === 'refining_failed') ? (
+                    // Show error indicator for failed states
+                    <View style={styles.errorIndicator}>
+                      <Ionicons name="alert-circle" size={12} color={theme.colors.accent} />
+                    </View>
+                  ) : null}
+                  
                   {item.duration && (
                     <Text style={styles.entryDuration}>{formatDuration(item.duration)}</Text>
                   )}
                 </View>
               </View>
               <Text style={styles.entryPreview} numberOfLines={2}>
-                {item.transcription === 'Processing...' ? 'Transcribing audio...' : item.transcription}
+                {getPreviewText(item)}
               </Text>
             </View>
           </Animated.View>
@@ -292,6 +316,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   processingIndicator: {
+    marginHorizontal: theme.spacing.xs,
+  },
+  errorIndicator: {
     marginHorizontal: theme.spacing.xs,
   },
   entryHeaderRight: {

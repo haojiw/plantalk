@@ -6,10 +6,11 @@ export interface PlantEntry {
   id: string;
   date: string; // ISO date string
   title: string;
-  transcription: string;
+  text: string; // This will be the refined transcription
+  rawText?: string; // Original Whisper output
   audioUri?: string;
   duration?: number; // in seconds
-  transcriptionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; // New field for tracking transcription status
+  processingStage?:  'transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed';
 }
 
 export interface PlantState {
@@ -22,7 +23,8 @@ interface PlantContextType {
   state: PlantState;
   addEntry: (entryData: Omit<PlantEntry, 'id'>) => Promise<void>;
   deleteEntry: (entryId: string) => Promise<void>;
-  updateEntryTranscription: (entryId: string, transcription: string, status: 'completed' | 'failed') => void;
+  updateEntryTranscription: (entryId: string, result: any, status: 'completed' | 'failed') => void;
+  updateEntryProgress: (entryId: string, stage: 'transcribing' | 'refining') => void;
   getDaysSinceLastEntry: () => number;
   resetStreak: () => void;
 }
@@ -42,33 +44,37 @@ const createDummyData = (): PlantEntry[] => {
       id: 'dummy-1',
       date: new Date(today.getTime() + 9 * 60 * 60 * 1000).toISOString(), // 9 AM today
       title: 'Morning Reflections',
-      transcription: 'Today I feel grateful for the small moments of peace I found during my morning walk. The birds were singing, and there was a gentle breeze that reminded me to slow down and appreciate nature around me.',
+      text: 'Today I feel grateful for the small moments of peace I found during my morning walk. The birds were singing, and there was a gentle breeze that reminded me to slow down and appreciate nature around me.',
+      rawText: 'today i feel grateful for the small moments of peace i found during my morning walk the birds were singing and there was a gentle breeze that reminded me to slow down and appreciate nature around me',
       duration: 125, // 2:05
-      transcriptionStatus: 'completed',
+      processingStage: 'completed',
     },
     {
       id: 'dummy-2',
       date: new Date(yesterday.getTime() + 19 * 60 * 60 * 1000).toISOString(), // 7 PM yesterday
       title: 'Evening Gratitude',
-      transcription: 'I had a challenging day at work, but I managed to find three things I was grateful for: my supportive colleague who helped me with the project, the delicious lunch I had, and the fact that I accomplished my main goals despite the obstacles.',
+      text: 'I had a challenging day at work, but I managed to find three things I was grateful for: my supportive colleague who helped me with the project, the delicious lunch I had, and the fact that I accomplished my main goals despite the obstacles.',
+      rawText: 'i had a challenging day at work but i managed to find three things i was grateful for my supportive colleague who helped me with the project the delicious lunch i had and the fact that i accomplished my main goals despite the obstacles',
       duration: 87, // 1:27
-      transcriptionStatus: 'completed',
+      processingStage: 'completed',
     },
     {
       id: 'dummy-3',
       date: new Date(lastWeek.getTime() + 14 * 60 * 60 * 1000).toISOString(), // 2 PM last week
       title: 'Weekend Discoveries',
-      transcription: 'This weekend I tried something new - I went to a pottery class. It was messy and I wasn\'t very good at it, but there was something meditative about working with my hands and focusing on creating something beautiful.',
+      text: 'This weekend I tried something new - I went to a pottery class. It was messy and I wasn\'t very good at it, but there was something meditative about working with my hands and focusing on creating something beautiful.',
+      rawText: 'this weekend i tried something new i went to a pottery class it was messy and i wasnt very good at it but there was something meditative about working with my hands and focusing on creating something beautiful',
       duration: 156, // 2:36
-      transcriptionStatus: 'completed',
+      processingStage: 'completed',
     },
     {
       id: 'dummy-4',
       date: new Date(twoWeeksAgo.getTime() + 11 * 60 * 60 * 1000).toISOString(), // 11 AM two weeks ago
       title: 'Mindful Moments',
-      transcription: 'I spent some time in meditation today and realized how much mental chatter I carry around. Finding moments of stillness helps me reconnect with what really matters.',
+      text: 'I spent some time in meditation today and realized how much mental chatter I carry around. Finding moments of stillness helps me reconnect with what really matters.',
+      rawText: 'i spent some time in meditation today and realized how much mental chatter i carry around finding moments of stillness helps me reconnect with what really matters',
       duration: 203, // 3:23
-      transcriptionStatus: 'completed',
+      processingStage: 'completed',
     },
   ];
 };
@@ -214,19 +220,41 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     }
 
     // If entry has audio but no transcription, set status to processing and start background transcription
-    if (newEntry.audioUri && (!newEntry.transcription || newEntry.transcription.trim() === '')) {
-      newEntry.transcription = 'Processing...'; // Temporary placeholder
-      newEntry.transcriptionStatus = 'processing';
+    if (newEntry.audioUri && (!newEntry.text || newEntry.text.trim() === '')) {
+      newEntry.text = 'Processing...'; // Temporary placeholder
+      newEntry.processingStage = 'transcribing'; // Set initial stage
       
-      // Start background transcription
+      // Start background transcription with new interface
       transcriptionService.addToQueue({
         entryId: newEntry.id,
         audioUri: newEntry.audioUri,
-        onComplete: updateEntryTranscription
+        onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
+          updateEntryProgress(entryId, stage);
+        },
+        onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
+          console.log(`[PlantProvider] onComplete called:`, { entryId, result, status });
+          
+          if (status === 'completed') {
+            // Update with successful result
+            updateEntryTranscription(entryId, {
+              ...result,
+              processingStage: result.processingStage || 'completed'
+            }, status);
+          } else {
+            // Handle error case - result already contains the appropriate processingStage
+            console.log(`[PlantProvider] Handling error case with processingStage:`, result.processingStage);
+            updateEntryTranscription(entryId, {
+              refinedTranscription: result.refinedTranscription || 'Transcription failed. Please try again.',
+              rawTranscription: result.rawTranscription || '',
+              aiGeneratedTitle: result.aiGeneratedTitle || `Entry - ${new Date().toLocaleDateString()}`,
+              processingStage: result.processingStage || 'transcribing_failed'
+            }, status);
+          }
+        }
       });
-    } else if (newEntry.transcription && newEntry.transcription.trim() !== '') {
+    } else if (newEntry.text && newEntry.text.trim() !== '') {
       // Entry already has transcription (shouldn't happen in normal flow but handles edge cases)
-      newEntry.transcriptionStatus = 'completed';
+      newEntry.processingStage = 'completed';
     }
 
     setState(prev => {
@@ -346,14 +374,38 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     }
   };
 
-  const updateEntryTranscription = (entryId: string, transcription: string, status: 'completed' | 'failed') => {
+  const updateEntryTranscription = (entryId: string, result: any, status: 'completed' | 'failed') => {
     setState(prev => {
       const updatedEntries = prev.entries.map(entry => {
         if (entry.id === entryId) {
           return {
             ...entry,
-            transcription: transcription,
-            transcriptionStatus: status,
+            title: result.aiGeneratedTitle || entry.title, // Use AI-generated title if available
+            text: result.refinedTranscription,
+            rawText: result.rawTranscription,
+            processingStage: result.processingStage,
+          };
+        }
+        return entry;
+      });
+
+      const newState = {
+        ...prev,
+        entries: updatedEntries,
+      };
+
+      saveEntries(newState);
+      return newState;
+    });
+  };
+
+  const updateEntryProgress = (entryId: string, stage: 'transcribing' | 'refining') => {
+    setState(prev => {
+      const updatedEntries = prev.entries.map(entry => {
+        if (entry.id === entryId) {
+          return {
+            ...entry,
+            processingStage: stage,
           };
         }
         return entry;
@@ -398,6 +450,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     addEntry,
     deleteEntry,
     updateEntryTranscription,
+    updateEntryProgress,
     getDaysSinceLastEntry,
     resetStreak,
   };

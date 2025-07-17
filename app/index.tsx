@@ -26,13 +26,11 @@ export default function HomeScreen() {
   // Animation values for smooth transitions
   const screenScale = useSharedValue(1);
   
-  // Floating animation for chevron with enhanced visibility
   const chevronFloat = useSharedValue(0);
   const chevronPulse = useSharedValue(1);
 
   // Start animations on mount
   useEffect(() => {
-    // Enhanced floating chevron animation
     chevronFloat.value = withRepeat(
       withTiming(-12, { 
         duration: 1800, 

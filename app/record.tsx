@@ -4,9 +4,9 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
@@ -71,7 +71,31 @@ export default function RecordScreen() {
         // Create new recording
         recording.current = new Audio.Recording();
         await recording.current.prepareToRecordAsync({
-          ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+          // Use more specific settings instead of HIGH_QUALITY preset
+          // which might create incompatible formats
+          android: {
+            extension: '.m4a',
+            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+            audioEncoder: Audio.AndroidAudioEncoder.AAC,
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+          },
+          ios: {
+            extension: '.m4a',
+            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+            audioQuality: Audio.IOSAudioQuality.HIGH,
+            sampleRate: 44100,
+            numberOfChannels: 2,
+            bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+          web: {
+            mimeType: 'audio/webm;codecs=opus',
+            bitsPerSecond: 128000,
+          },
           isMeteringEnabled: true, // Enable real-time audio level monitoring
         });
         
@@ -221,11 +245,12 @@ export default function RecordScreen() {
         // Save entry immediately (transcription will happen in background)
         await addEntry({
           date: new Date().toISOString(),
-          title: `Entry for ${new Date().toLocaleDateString()}`,
+          title: 'Processing...', // Will be replaced by AI-generated title
           transcription: '', // Will be filled by background transcription
           duration,
           audioUri: uri || '',
           transcriptionStatus: 'pending', // Indicates transcription needed
+          processingStage: 'audio', // Initial stage
         });
         
         // Let the cleanup function handle the recording object on unmount
