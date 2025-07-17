@@ -1,64 +1,51 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    Easing,
-    interpolate,
-    runOnJS,
-    useAnimatedStyle,
-    useSharedValue,
-    withRepeat,
-    withSpring,
-    withTiming,
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { usePlant } from '@/context/PlantProvider';
 import { theme } from '@/styles/theme';
 
-const { height: screenHeight } = Dimensions.get('window');
-
 export default function HomeScreen() {
   const { state } = usePlant();
-  const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
   
-  // Breathing animation for plant
-  const breathingScale = useSharedValue(1);
-  const breathingOpacity = useSharedValue(1);
+  // Animation values for smooth transitions
+  const screenScale = useSharedValue(1);
   
-  // Floating animation for chevron
+  // Floating animation for chevron with enhanced visibility
   const chevronFloat = useSharedValue(0);
+  const chevronPulse = useSharedValue(1);
 
-  // Start breathing animation on mount
+  // Start animations on mount
   useEffect(() => {
-    // Gentle breathing animation - scale slightly up/down
-    breathingScale.value = withRepeat(
-      withTiming(1.02, { 
-        duration: 3000, 
-        easing: Easing.inOut(Easing.ease) 
-      }),
-      -1,
-      true
-    );
-    
-    // Subtle opacity breathing
-    breathingOpacity.value = withRepeat(
-      withTiming(0.95, { 
-        duration: 3000, 
+    // Enhanced floating chevron animation
+    chevronFloat.value = withRepeat(
+      withTiming(-12, { 
+        duration: 1800, 
         easing: Easing.inOut(Easing.ease) 
       }),
       -1,
       true
     );
 
-    // Floating chevron animation
-    chevronFloat.value = withRepeat(
-      withTiming(-8, { 
-        duration: 2000, 
+    // Subtle pulse animation for better visibility
+    chevronPulse.value = withRepeat(
+      withTiming(1.2, { 
+        duration: 2500, 
         easing: Easing.inOut(Easing.ease) 
       }),
       -1,
@@ -74,101 +61,94 @@ export default function HomeScreen() {
     });
     
     // Navigate to record screen
-    router.push('/record');
+    try {
+      router.push('/record');
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
   };
 
-  // Navigate to history with smooth transition
+  // Function to handle navigation with smooth transition
   const navigateToHistory = () => {
-    router.push('/history');
+    try {
+      // Trigger haptic feedback first
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      // Start scale animation
+      screenScale.value = withTiming(0.95, { 
+        duration: 200, 
+        easing: Easing.out(Easing.ease) 
+      });
+      
+      // Navigate after a short delay to allow animation to start
+      setTimeout(() => {
+        router.push('/history');
+        // Reset animations for when user comes back
+        screenScale.value = 1;
+      }, 100);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Reset animations if navigation fails
+      screenScale.value = withSpring(1);
+    }
   };
 
-  // Enhanced swipe up gesture for seamless transition
-  const swipeGesture = Gesture.Pan()
+  // Improved swipe gesture with simplified animation
+  const swipeUpGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10]) // Allow small horizontal movement
+    .failOffsetX([-50, 50]) // Fail if too much horizontal movement
+    .minDistance(30) // Minimum distance to trigger
     .onUpdate((event) => {
-      if (event.translationY < 0) {
-        // Clamp the translation to create resistance effect
-        const clampedTranslation = Math.max(event.translationY, -screenHeight * 0.8);
-        translateY.value = clampedTranslation;
+      // Provide visual feedback during swipe - only scale
+      if (event.translationY < -20) {
+        const progress = Math.min(1, Math.abs(event.translationY) / 100);
+        screenScale.value = 1 - (progress * 0.05);
       }
     })
     .onEnd((event) => {
-      if (event.translationY < -100 && event.velocityY < -500) {
-        // Smooth transition to history screen
-        translateY.value = withTiming(-screenHeight, {
-          duration: 300,
-          easing: Easing.out(Easing.quad),
-        }, () => {
-          runOnJS(navigateToHistory)();
-          // Reset position after navigation
-          translateY.value = 0;
-        });
+      // Check for a decisive swipe upwards with improved conditions
+      const isSwipeUp = event.translationY < -50;
+      const hasEnoughVelocity = Math.abs(event.velocityY) > 300;
+      const isUpwardVelocity = event.velocityY < -200;
+      
+      if (isSwipeUp && hasEnoughVelocity && isUpwardVelocity) {
+        // Use runOnJS to ensure the navigation runs on the JS thread
+        runOnJS(navigateToHistory)();
       } else {
-        // Spring back to original position
-        translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 200,
-        });
+        // Reset animations if swipe didn't meet criteria
+        screenScale.value = withSpring(1, { damping: 15 });
+      }
+    })
+    .onFinalize(() => {
+      // Ensure animations are reset on gesture end
+      if (screenScale.value !== 1) {
+        screenScale.value = withSpring(1, { damping: 15 });
       }
     });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(
-      translateY.value,
-      [0, -screenHeight * 0.3],
-      [1, 0.7],
-      'clamp'
-    );
-    
-    const scale = interpolate(
-      translateY.value,
-      [0, -screenHeight * 0.3],
-      [1, 0.95],
-      'clamp'
-    );
-
-    return {
-      transform: [
-        { translateY: translateY.value },
-        { scale }
-      ],
-      opacity,
-    };
-  });
 
   const plantAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
-  const breathingAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: breathingScale.value }],
-    opacity: breathingOpacity.value,
-  }));
-
   const chevronAnimatedStyle = useAnimatedStyle(() => {
-    const combinedTranslateY = chevronFloat.value + interpolate(
-      translateY.value,
-      [0, -100],
-      [0, -10],
-      'clamp'
-    );
-
-    const opacity = interpolate(
-      translateY.value,
-      [0, -50],
-      [0.6, 1],
-      'clamp'
-    );
-
     return {
-      transform: [{ translateY: combinedTranslateY }],
-      opacity,
+      transform: [
+        { translateY: chevronFloat.value },
+        { scale: chevronPulse.value }
+      ],
+      opacity: 0.7,
     };
   });
 
+  // Main container animation for smooth transitions
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: screenScale.value }],
+  }));
+
   return (
     <ScreenWrapper>
-      <GestureDetector gesture={swipeGesture}>
-        <Animated.View style={[styles.container, animatedStyle]}>
+      <GestureDetector gesture={swipeUpGesture}>
+        <Animated.View style={[styles.container, containerAnimatedStyle]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.greeting}>Good morning</Text>
@@ -179,13 +159,13 @@ export default function HomeScreen() {
           <View style={styles.plantContainer}>
             <Pressable onPress={handlePlantPress}>
               <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
-                <Animated.View style={[styles.plantCard, breathingAnimatedStyle]}>
+                <View style={styles.plantCard}>
                   <Image
                     source={require('@/assets/images/plant.png')}
                     style={styles.plantImage}
-                    resizeMode="contain"
+                    contentFit="contain"
                   />
-                </Animated.View>
+                </View>
               </Animated.View>
             </Pressable>
           </View>
@@ -199,6 +179,7 @@ export default function HomeScreen() {
                 color={theme.colors.text + '60'} 
               />
             </Animated.View>
+            <Text style={styles.hintText}>Swipe up for history</Text>
           </View>
         </Animated.View>
       </GestureDetector>
@@ -251,4 +232,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: theme.spacing.xl,
   },
-}); 
+  hintText: {
+    ...theme.typography.caption,
+    color: theme.colors.text + '40',
+    marginTop: theme.spacing.xs,
+    fontSize: 12,
+  },
+});

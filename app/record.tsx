@@ -13,17 +13,16 @@ import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { usePlant } from '@/context/PlantProvider';
 import { theme } from '@/styles/theme';
 
-type RecordingState = 'recording' | 'paused' | 'uploading' | 'transcribing' | 'success' | 'error';
+type RecordingState = 'recording' | 'paused' | 'saving' | 'error';
 
 export default function RecordScreen() {
   const [recordingState, setRecordingState] = useState<RecordingState>('recording');
   const [duration, setDuration] = useState(0);
-  const [transcription, setTranscription] = useState('');
   const [audioUri, setAudioUri] = useState<string>('');
   const [hasPermission, setHasPermission] = useState(false);
   
   const recording = useRef<Audio.Recording | null>(null);
-  const meteringInterval = useRef<NodeJS.Timeout | null>(null);
+  const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const { addEntry } = usePlant();
 
   // Waveform animation with 9 bars for better visual effect
@@ -107,12 +106,11 @@ export default function RecordScreen() {
       meteringInterval.current = null;
     }
     if (recording.current) {
-      recording.current.stopAndUnloadAsync();
+      recording.current.stopAndUnloadAsync().catch(e => console.error('Error on cleanup', e));
       recording.current = null;
     }
   };
 
-  // Real-time metering for waveform
   const startMetering = () => {
     meteringInterval.current = setInterval(async () => {
       if (recording.current) {
@@ -166,13 +164,18 @@ export default function RecordScreen() {
 
   // Timer for recording duration
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (recordingState === 'recording') {
       interval = setInterval(() => {
         setDuration(prev => prev + 1);
       }, 1000);
     }
-    return () => clearInterval(interval);
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [recordingState]);
 
   const formatDuration = (seconds: number): string => {
@@ -208,41 +211,33 @@ export default function RecordScreen() {
   const handleFinishRecording = async () => {
     try {
       if (recording.current) {
-        await recording.current.stopAndUnloadAsync();
+        setRecordingState('saving');
+        
+        // Stop metering, but let the useEffect cleanup handle the recording object itself
+        stopMetering();
         const uri = recording.current.getURI();
         setAudioUri(uri || '');
-        stopMetering();
         
-        // Start transcription simulation
-        setRecordingState('transcribing');
+        // Save entry immediately (transcription will happen in background)
+        await addEntry({
+          date: new Date().toISOString(),
+          title: `Entry for ${new Date().toLocaleDateString()}`,
+          transcription: '', // Will be filled by background transcription
+          duration,
+          audioUri: uri || '',
+          transcriptionStatus: 'pending', // Indicates transcription needed
+        });
         
-        // Simulate transcription process
-        setTimeout(() => {
-          const mockTranscription = "Today I reflected on my journey and realized how much I've grown. The challenges I faced last week taught me valuable lessons about resilience and patience. I'm grateful for the small moments of joy that helped me through difficult times.";
-          setTranscription(mockTranscription);
-          setRecordingState('success');
-        }, 2000);
+        // Let the cleanup function handle the recording object on unmount
+        // recording.current = null;
         
-        recording.current = null;
+        // Navigate to history to show the new entry
+        router.replace('/history');
       }
     } catch (error) {
       console.error('Error finishing recording:', error);
       setRecordingState('error');
     }
-  };
-
-  const handleSaveEntry = () => {
-    if (!transcription) return;
-    
-    addEntry({
-      date: new Date().toISOString(),
-      title: `Entry for ${new Date().toLocaleDateString()}`,
-      transcription,
-      duration,
-      audioUri, // Save the audio file URI
-    });
-    
-    router.back();
   };
 
   const handleClose = () => {
@@ -253,13 +248,13 @@ export default function RecordScreen() {
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Discard', style: 'destructive', onPress: () => {
-            cleanupRecording();
+            // No need to call cleanupRecording here, unmount will handle it
             router.back();
           }},
         ]
       );
     } else {
-      cleanupRecording();
+      // No need to call cleanupRecording here, unmount will handle it
       router.back();
     }
   };
@@ -318,8 +313,7 @@ export default function RecordScreen() {
           <Text style={styles.statusText}>
             {recordingState === 'recording' && 'Recording...'}
             {recordingState === 'paused' && 'Paused'}
-            {recordingState === 'transcribing' && 'Transcribing...'}
-            {recordingState === 'success' && 'Transcription complete'}
+            {recordingState === 'saving' && 'Saving...'}
             {recordingState === 'error' && 'Something went wrong'}
           </Text>
           
@@ -350,14 +344,6 @@ export default function RecordScreen() {
           />
         </View>
 
-        {/* Transcription Display */}
-        {recordingState === 'success' && transcription && (
-          <View style={styles.transcriptionContainer}>
-            <Text style={styles.transcriptionTitle}>Transcription</Text>
-            <Text style={styles.transcriptionText}>{transcription}</Text>
-          </View>
-        )}
-
         {/* Controls */}
         <View style={styles.controlsContainer}>          
           {recordingState === 'recording' && (
@@ -382,16 +368,10 @@ export default function RecordScreen() {
             </View>
           )}
           
-          {recordingState === 'transcribing' && (
+          {recordingState === 'saving' && (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Processing your recording...</Text>
+              <Text style={styles.loadingText}>Saving your recording...</Text>
             </View>
-          )}
-          
-          {recordingState === 'success' && (
-            <Pressable onPress={handleSaveEntry} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save Entry</Text>
-            </Pressable>
           )}
           
           {recordingState === 'error' && (

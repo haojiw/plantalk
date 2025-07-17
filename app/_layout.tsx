@@ -64,17 +64,44 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PlantProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="history" options={{ headerShown: false }} />
+          <Stack screenOptions={{ 
+            headerShown: false,
+            animation: 'fade',
+            animationDuration: 250,
+            animationTypeForReplace: 'push',
+          }}>
+            <Stack.Screen 
+              name="index" 
+              options={{ 
+                headerShown: false,
+                animation: 'fade',
+                animationDuration: 250,
+              }} 
+            />
+            <Stack.Screen
+              name="history"
+              options={{
+                headerShown: false,
+                animation: 'fade',
+                animationDuration: 250,
+              }}
+            />
             <Stack.Screen 
               name="record" 
               options={{ 
                 animation: 'fade',
+                animationDuration: 250,
                 headerShown: false,
               }} 
             />
-            <Stack.Screen name="entry/[id]" options={{ headerShown: false }} />
+            <Stack.Screen 
+              name="entry/[id]" 
+              options={{ 
+                headerShown: false,
+                animation: 'default',
+                animationDuration: 250,
+              }} 
+            />
             <Stack.Screen name="+not-found" />
           </Stack>
         </PlantProvider>
