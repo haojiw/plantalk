@@ -159,7 +159,7 @@ export default function HomeScreen() {
               <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
                 <View style={styles.plantCard}>
                   <Image
-                    source={require('@/assets/images/plant.png')}
+                    source={require('@/assets/images/bonsai.png')}
                     style={styles.plantImage}
                     contentFit="contain"
                   />
@@ -223,8 +223,8 @@ const styles = StyleSheet.create({
     ...theme.shadows.lg,
   },
   plantImage: {
-    width: 180,
-    height: 180,
+    width: 300,
+    height: 300,
   },
   bottomHint: {
     alignItems: 'center',

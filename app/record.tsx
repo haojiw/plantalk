@@ -4,9 +4,9 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
@@ -246,11 +246,11 @@ export default function RecordScreen() {
         await addEntry({
           date: new Date().toISOString(),
           title: 'Processing...', // Will be replaced by AI-generated title
-          transcription: '', // Will be filled by background transcription
+          text: '', 
+          rawText: '', // Original Whisper output
           duration,
           audioUri: uri || '',
-          transcriptionStatus: 'pending', // Indicates transcription needed
-          processingStage: 'audio', // Initial stage
+          processingStage: 'transcribing',
         });
         
         // Let the cleanup function handle the recording object on unmount
@@ -363,7 +363,7 @@ export default function RecordScreen() {
           
           {/* Plant Image */}
           <Image 
-            source={require('@/assets/images/plant.png')} 
+            source={require('@/assets/images/bonsai.png')} 
             style={styles.plantImage}
             resizeMode="contain"
           />
@@ -420,8 +420,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   closeButton: {
     width: 44,
@@ -436,7 +435,7 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xxl,
+    marginBottom: theme.spacing.md,
   },
   statusText: {
     ...theme.typography.subheading,
@@ -452,7 +451,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: theme.spacing.xxl,
+    marginVertical: theme.spacing.md,
     width: '80%',
     alignSelf: 'center',
   },
@@ -471,29 +470,12 @@ const styles = StyleSheet.create({
     minHeight: 8,
   },
   plantImage: {
-    width: 80,
-    height: 80,
-    opacity: 0.7,
-  },
-  transcriptionContainer: {
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-    ...theme.shadows.sm,
-  },
-  transcriptionTitle: {
-    ...theme.typography.subheading,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  transcriptionText: {
-    ...theme.typography.body,
-    color: theme.colors.text,
-    lineHeight: 24,
+    width: 200,
+    height: 200,
   },
   controlsContainer: {
     alignItems: 'center',
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.xxl,
   },
   recordingControls: {
