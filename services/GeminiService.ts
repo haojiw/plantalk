@@ -111,7 +111,6 @@ Respond in this exact JSON format:
           temperature: 0.3, // Lower temperature for more consistent formatting
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1024
         }
       };
 

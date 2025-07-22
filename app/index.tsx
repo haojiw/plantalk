@@ -192,7 +192,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: theme.spacing.xxl,
+    marginTop: theme.spacing.xxl,
+    paddingTop: theme.spacing.xl,
   },
   greeting: {
     ...theme.typography.title,

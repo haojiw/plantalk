@@ -416,16 +416,21 @@ export default function EntryDetailScreen() {
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </Pressable>
             </View>
-          ) : entry.processingStage === 'refining_failed' ? (
-            // Refinement failed - show raw text and refinement retry button
+          ) : entry.processingStage === 'refining_failed' || (entry.processingStage === 'refining' && entry.rawText) ? (
+            // Refinement failed OR stuck in refining with raw text - show raw text and refinement retry button
             <View>
-              <Text style={styles.transcriptionText}>{entry.text}</Text>
+              <Text style={styles.transcriptionText}>{entry.text || entry.rawText}</Text>
               
               <View style={styles.failureContainer}>
                 <Ionicons name="construct" size={32} color={theme.colors.accent} />
-                <Text style={styles.failureTitle}>Refinement Failed</Text>
+                <Text style={styles.failureTitle}>
+                  {entry.processingStage === 'refining' ? 'Refinement Stuck' : 'Refinement Failed'}
+                </Text>
                 <Text style={styles.failureMessage}>
-                  Couldn't improve the formatting. Try again or keep as is.
+                  {entry.processingStage === 'refining' 
+                    ? 'Text refinement appears to be stuck. Try refining again.'
+                    : 'Couldn\'t improve the formatting. Try again or keep as is.'
+                  }
                 </Text>
                 <Pressable style={styles.refineRetryButton} onPress={() => handleRetryRefinement()}>
                   <Ionicons name="sparkles" size={16} color={theme.colors.primary} />
@@ -433,7 +438,7 @@ export default function EntryDetailScreen() {
                 </Pressable>
               </View>
             </View>
-          ) : entry.processingStage === 'transcribing' || entry.processingStage === 'refining' ? (
+          ) : entry.processingStage === 'transcribing' || (entry.processingStage === 'refining' && !entry.rawText) ? (
             // Still processing - show loading state
             <View style={styles.processingContainer}>
               <View style={styles.processingIconContainer}>
