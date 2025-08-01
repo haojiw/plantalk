@@ -23,6 +23,7 @@ interface PlantContextType {
   state: PlantState;
   addEntry: (entryData: Omit<PlantEntry, 'id'>) => Promise<void>;
   deleteEntry: (entryId: string) => Promise<void>;
+  updateEntry: (entryId: string, updates: Partial<PlantEntry>) => Promise<void>;
   updateEntryTranscription: (entryId: string, result: any, status: 'completed' | 'failed') => void;
   updateEntryProgress: (entryId: string, stage: 'transcribing' | 'refining') => void;
   getDaysSinceLastEntry: () => number;
@@ -374,6 +375,28 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     }
   };
 
+  const updateEntry = async (entryId: string, updates: Partial<PlantEntry>) => {
+    setState(prev => {
+      const updatedEntries = prev.entries.map(entry => {
+        if (entry.id === entryId) {
+          return {
+            ...entry,
+            ...updates,
+          };
+        }
+        return entry;
+      });
+
+      const newState = {
+        ...prev,
+        entries: updatedEntries,
+      };
+
+      saveEntries(newState);
+      return newState;
+    });
+  };
+
   const updateEntryTranscription = (entryId: string, result: any, status: 'completed' | 'failed') => {
     setState(prev => {
       const updatedEntries = prev.entries.map(entry => {
@@ -449,6 +472,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     state,
     addEntry,
     deleteEntry,
+    updateEntry,
     updateEntryTranscription,
     updateEntryProgress,
     getDaysSinceLastEntry,
