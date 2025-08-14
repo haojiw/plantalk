@@ -81,7 +81,7 @@ TASK:
 1. Create a meaningful 2-5 word title capturing the main theme
 2. Fix transcription errors (misheard words, missing punctuation, excessive filler words)
 3. Always preserve the speaker's authentic voice and tone
-4. For long texts, format the text into proper paragraphs with good flow, optionallyadd subheading when appropriate
+4. For long texts, format the text into proper paragraphs with good flow, optionally add subheading when appropriate
 
 CRITICAL CONSTRAINTS: apply MINIMAL changes to the original text
 - Use original language from the text, strictly no translation
