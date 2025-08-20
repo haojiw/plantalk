@@ -3,7 +3,7 @@ import { Audio } from 'expo-av';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActionSheetIOS, Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActionSheetIOS, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedRef, useAnimatedStyle, useScrollViewOffset, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -550,7 +550,11 @@ export default function EntryDetailScreen() {
 
   return (
     <ScreenWrapper>
-      <View style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
+      >
         {/* Minimalist Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -585,6 +589,7 @@ export default function EntryDetailScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Date - Hidden by default, reveals on overscroll */}
           <Animated.Text style={[styles.date, dateAnimatedStyle]}>
@@ -701,7 +706,7 @@ export default function EntryDetailScreen() {
             <Text style={styles.transcriptionText}>{entry.text}</Text>
           )}
         </Animated.ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }
@@ -770,9 +775,9 @@ const styles = StyleSheet.create({
     ...theme.typography.title,
     color: theme.colors.text,
     marginBottom: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    paddingBottom: theme.spacing.sm,
+    // Remove border to make editing seamless
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   audioPlayer: {
     backgroundColor: theme.colors.background,
@@ -954,11 +959,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editContainer: {
-    backgroundColor: theme.colors.background + '08',
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+    // Remove background and styling to make editing seamless
     marginTop: theme.spacing.md,
-    gap: theme.spacing.sm,
   },
   textInput: {
     ...theme.typography.body,
@@ -966,10 +968,11 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontSize: 16,
     minHeight: 200,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border + '40',
-    borderRadius: theme.borderRadius.md,
+    // Remove all borders and backgrounds to match normal text
+    padding: 0,
+    margin: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
     textAlignVertical: 'top',
   },
 }); 
