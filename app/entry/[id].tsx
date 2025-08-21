@@ -2,26 +2,30 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { ActionSheetIOS, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { interpolate, useAnimatedRef, useAnimatedStyle, useScrollViewOffset, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
 
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { EntryContent } from '@/components/EntryContent';
+import { EntryDetailHeader } from '@/components/EntryDetailHeader';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { usePlant } from '@/context/PlantProvider';
+import { useDateRevealAnimation } from '@/hooks/useDateRevealAnimation';
 import { useEntryEditor } from '@/hooks/useEntryEditor';
+import { useEntryOptions } from '@/hooks/useEntryOptions';
 import { transcriptionService } from '@/services/TranscriptionService';
 import { theme } from '@/styles/theme';
 
 export default function EntryDetailScreen() {
+  // 1. Get entry and context functions
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, updateEntry, updateEntryProgress, updateEntryTranscription } = usePlant();
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const scrollOffset = useScrollViewOffset(scrollRef);
-  const dateRevealed = useSharedValue(0); // 0 = hidden, 1 = revealed
-  
   const entry = state.entries.find(e => e.id === id);
 
+  // 2. Initialize all hooks
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollOffset = useScrollViewOffset(scrollRef);
+  
   const {
     isEditing,
     editTitle,
@@ -33,6 +37,14 @@ export default function EntryDetailScreen() {
     handleCancelEdit,
   } = useEntryEditor({ entry, updateEntry });
 
+  const { showOptions } = useEntryOptions({ 
+    entry, 
+    updateEntry, 
+    onEditEntry: handleEditEntry 
+  });
+
+  const { dateAnimatedStyle } = useDateRevealAnimation({ scrollOffset });
+
   // Debug: Log entry details
   console.log(`[EntryDetail] Entry found:`, {
     id,
@@ -42,53 +54,7 @@ export default function EntryDetailScreen() {
     hasAudio: !!entry?.audioUri
   });
 
-  // Enhanced date animation that can hide again when scrolling down
-  const dateAnimatedStyle = useAnimatedStyle(() => {
-    const pullOpacity = interpolate(
-      scrollOffset.value,
-      [-100, -50, 0],
-      [1, 0.5, 0],
-      'clamp'
-    );
-    
-    // If user pulls down significantly, reveal the date permanently
-    if (scrollOffset.value < -50 && dateRevealed.value === 0) {
-      dateRevealed.value = withSpring(1, { damping: 15, stiffness: 100 });
-    }
-    
-    // If user scrolls down after revealing, hide the date again
-    if (scrollOffset.value > 50 && dateRevealed.value === 1) {
-      dateRevealed.value = withSpring(0, { damping: 15, stiffness: 100 });
-    }
-    
-    // Show either pull-to-reveal or permanent revealed state
-    const finalOpacity = Math.max(pullOpacity, dateRevealed.value);
-    
-    return {
-      opacity: finalOpacity,
-    };
-  });
-
-  if (!entry) {
-    return (
-      <ScreenWrapper>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-            </Pressable>
-            <View style={styles.headerSpacer} />
-          </View>
-          
-          <View style={styles.errorContainer}>
-            <Ionicons name="leaf-outline" size={48} color={theme.colors.primary + '40'} />
-            <Text style={styles.errorText}>Entry not found</Text>
-          </View>
-        </View>
-      </ScreenWrapper>
-    );
-  }
-
+  // Helper functions
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -103,170 +69,19 @@ export default function EntryDetailScreen() {
 
   const handleCopyText = async () => {
     try {
-      await Clipboard.setStringAsync(entry.text);
+      await Clipboard.setStringAsync(entry?.text || '');
       Alert.alert('Copied', 'Transcription copied to clipboard');
     } catch (error) {
       Alert.alert('Error', 'Failed to copy text');
     }
   };
 
-  const handleMorePress = () => {
-    if (!entry) return;
-
-    const showDateTimePicker = () => {
-      const currentDate = new Date(entry.date);
-      
-      if (Platform.OS === 'ios') {
-        // On iOS, use ActionSheetIOS for a native feel
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            title: 'Change Date & Time',
-            message: 'Choose how you want to update the date and time',
-            options: ['Cancel', 'Change Date', 'Change Time', 'Change Both'],
-            cancelButtonIndex: 0,
-          },
-          (buttonIndex) => {
-            switch (buttonIndex) {
-              case 1:
-                showDatePicker(currentDate);
-                break;
-              case 2:
-                showTimePicker(currentDate);
-                break;
-              case 3:
-                showDatePicker(currentDate, true); // Will chain to time picker
-                break;
-            }
-          }
-        );
-      } else {
-        // On Android, use Alert for consistency
-        Alert.alert(
-          'Change Date & Time',
-          'Choose how you want to update the date and time',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Change Date', onPress: () => showDatePicker(currentDate) },
-            { text: 'Change Time', onPress: () => showTimePicker(currentDate) },
-            { text: 'Change Both', onPress: () => showDatePicker(currentDate, true) },
-          ]
-        );
-      }
-    };
-
-    const showDatePicker = (currentDate: Date, chainToTime: boolean = false) => {
-      const year = currentDate.getFullYear().toString();
-      const month = (currentDate.getMonth() + 1).toString();
-      const day = currentDate.getDate().toString();
-      
-      Alert.prompt(
-        'Change Date',
-        'Enter the date (YYYY-MM-DD)',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'OK',
-            onPress: (dateString) => {
-              if (dateString) {
-                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                if (dateRegex.test(dateString)) {
-                  const [newYear, newMonth, newDay] = dateString.split('-').map(Number);
-                  const newDate = new Date(currentDate);
-                  newDate.setFullYear(newYear, newMonth - 1, newDay);
-                  
-                  if (chainToTime) {
-                    showTimePicker(newDate);
-                  } else {
-                    updateEntryDate(newDate);
-                  }
-                } else {
-                  Alert.alert('Invalid Date', 'Please enter date in YYYY-MM-DD format');
-                }
-              }
-            }
-          }
-        ],
-        'plain-text',
-        `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-      );
-    };
-
-    const showTimePicker = (baseDate: Date) => {
-      const hours = baseDate.getHours();
-      const minutes = baseDate.getMinutes();
-      
-      Alert.prompt(
-        'Change Time',
-        'Enter the time (HH:MM, 24-hour format)',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'OK',
-            onPress: (timeString) => {
-              if (timeString) {
-                const timeRegex = /^\d{2}:\d{2}$/;
-                if (timeRegex.test(timeString)) {
-                  const [newHours, newMinutes] = timeString.split(':').map(Number);
-                  if (newHours >= 0 && newHours <= 23 && newMinutes >= 0 && newMinutes <= 59) {
-                    const newDate = new Date(baseDate);
-                    newDate.setHours(newHours, newMinutes);
-                    updateEntryDate(newDate);
-                  } else {
-                    Alert.alert('Invalid Time', 'Please enter valid hours (00-23) and minutes (00-59)');
-                  }
-                } else {
-                  Alert.alert('Invalid Time', 'Please enter time in HH:MM format');
-                }
-              }
-            }
-          }
-        ],
-        'plain-text',
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-      );
-    };
-
-    const updateEntryDate = async (newDate: Date) => {
-      try {
-        await updateEntry(entry.id, { date: newDate.toISOString() });
-        Alert.alert('Success', 'Date and time updated successfully');
-      } catch (error) {
-        console.error('Error updating entry date:', error);
-        Alert.alert('Error', 'Failed to update date and time');
-      }
-    };
-
-    // Show the main action sheet
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: 'Entry Options',
-          options: ['Cancel', 'Edit Entry', 'Change Date & Time'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            handleEditEntry();
-          } else if (buttonIndex === 2) {
-            showDateTimePicker();
-          }
-        }
-      );
-    } else {
-      Alert.alert(
-        'Entry Options',
-        'What would you like to do?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Edit Entry', onPress: handleEditEntry },
-          { text: 'Change Date & Time', onPress: showDateTimePicker },
-        ]
-      );
-    }
+  const handleBackPress = () => {
+    router.back();
   };
 
   const handleRetryTranscription = async () => {
-    if (!entry.audioUri) return;
+    if (!entry?.audioUri) return;
 
     try {
       // Update the entry to show it's processing again
@@ -304,7 +119,7 @@ export default function EntryDetailScreen() {
   };
 
   const handleRetryRefinement = async () => {
-    if (!entry.rawText) return;
+    if (!entry?.rawText) return;
 
     try {
       // Update the entry to show it's refining again
@@ -331,6 +146,30 @@ export default function EntryDetailScreen() {
     }
   };
 
+  // Entry not found state
+  if (!entry) {
+    return (
+      <ScreenWrapper>
+        <View style={styles.container}>
+          <EntryDetailHeader
+            isEditing={false}
+            onBackPress={handleBackPress}
+            onCopy={() => {}}
+            onMorePress={() => {}}
+            onCancelEdit={() => {}}
+            onSaveEdit={async () => {}}
+          />
+          
+          <View style={styles.errorContainer}>
+            <Ionicons name="leaf-outline" size={48} color={theme.colors.primary + '40'} />
+            <Text style={styles.errorText}>Entry not found</Text>
+          </View>
+        </View>
+      </ScreenWrapper>
+    );
+  }
+
+  // 3. Render by composing components
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView 
@@ -338,33 +177,14 @@ export default function EntryDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       >
-        {/* Minimalist Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-          </Pressable>
-          <View style={styles.headerControls}>
-            {isEditing ? (
-              <>
-                <Pressable onPress={handleCancelEdit} style={styles.cancelButton}>
-                  <Ionicons name="close" size={24} color={theme.colors.accent} />
-                </Pressable>
-                <Pressable onPress={handleSaveEdit} style={styles.saveButton}>
-                  <Ionicons name="checkmark" size={24} color={theme.colors.surface} />
-                </Pressable>
-              </>
-            ) : (
-              <>
-                <Pressable onPress={handleCopyText} style={styles.copyButton}>
-                  <Ionicons name="copy-outline" size={24} color={theme.colors.text} />
-                </Pressable>
-                <Pressable onPress={handleMorePress} style={styles.moreButton}>
-                  <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
-                </Pressable>
-              </>
-            )}
-          </View>
-        </View>
+        <EntryDetailHeader
+          isEditing={isEditing}
+          onBackPress={handleBackPress}
+          onCopy={handleCopyText}
+          onMorePress={showOptions}
+          onCancelEdit={handleCancelEdit}
+          onSaveEdit={handleSaveEdit}
+        />
 
         <Animated.ScrollView 
           ref={scrollRef}
@@ -416,44 +236,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerControls: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  copyButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerSpacer: {
-    width: 44,
-  },
   content: {
     flex: 1,
   },
@@ -488,21 +270,5 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.text + '60',
     marginTop: theme.spacing.md,
-  },
-  cancelButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.borderRadius.full,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 }); 
