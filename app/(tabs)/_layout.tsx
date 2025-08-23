@@ -36,8 +36,7 @@ export default function TabLayout() {
         tabBarBackground: () => (
           <BlurView 
             intensity={50}
-            
-            tint="light"
+            tint={colorScheme === 'dark' ? 'dark' : 'light'}
             style={{
               flex: 1,
               backgroundColor: theme.colors.background + 'A0',
@@ -51,7 +50,6 @@ export default function TabLayout() {
         name="journal"
         options={{
           title: 'Journal',
-          animation: 'none',
           tabBarIcon: ({ color, focused }) => (
             <View style={{
               width: 60,
@@ -74,7 +72,6 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Entry',
-          animation: 'none',
           tabBarIcon: ({ color, focused }) => (
             <View style={{
               width: 60,

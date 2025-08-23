@@ -3,12 +3,13 @@ import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 
 import { HistoryList } from '@/components/HistoryList';
@@ -24,7 +25,16 @@ interface SectionData {
 export default function JournalScreen() {
   const { state, deleteEntry, addEntry } = usePlant();
   const [swipedEntryId, setSwipedEntryId] = useState<string | null>(null);
-  const opacity = useSharedValue(1);
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: 200 });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
   
   const handleOutsideInteraction = () => {
     if (swipedEntryId !== null) {

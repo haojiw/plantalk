@@ -1,11 +1,12 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
-import React from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
@@ -15,7 +16,16 @@ import { theme } from '@/styles/theme';
 export default function EntryScreen() {
   const { state } = usePlant();
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: 200 });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
 
   // Handle plant press - animate and open record modal
   const handlePlantPress = () => {

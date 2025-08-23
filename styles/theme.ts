@@ -54,9 +54,9 @@ export const theme = {
     },
     heading: {
       fontFamily: fonts.heading,
-      fontSize: 24,
+      fontSize: 22,
       fontWeight: '600' as const,
-      lineHeight: 29,
+      lineHeight: 28,
     },
     subheading: {
       fontFamily: fonts.bodyBold,
