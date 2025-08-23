@@ -40,7 +40,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
       <View style={[styles.emptyState, { marginTop: 120 }]}>
         <Ionicons name="book-outline" size={48} color={theme.colors.text + '30'} />
         <Text style={styles.emptyStateText}>
-          No entries yet. Start your journaling journey!
+          No entries yet. Start your journey!
         </Text>
       </View>
     );
@@ -51,8 +51,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.listContent, { 
-          paddingTop: 120, // Account for header height
-          paddingBottom: 100 + insets.bottom // Account for footer height
+          paddingBottom: theme.spacing.xl + insets.bottom // Just padding for safe area
         }]}
         scrollEventThrottle={16}
         bounces={true}
@@ -84,16 +83,6 @@ export const HistoryList: React.FC<HistoryListProps> = ({
           </View>
         ))}
       </Animated.ScrollView>
-
-      {/* Footer with Basic Blur Backdrop */}
-      <View style={[styles.footerContainer, { paddingBottom: insets.bottom }]}>
-        <View style={styles.footerBorder} />
-        <View style={styles.footerContent}>
-          <Text style={styles.footerText}>
-            {entriesCount} {entriesCount === 1 ? 'entry' : 'entries'}
-          </Text>
-        </View>
-      </View>
     </>
   );
 };
@@ -102,13 +91,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
+    paddingTop: theme.spacing.md,
   },
   sectionHeader: {
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
   },
   sectionTitle: {
-    ...theme.typography.heading,
+    ...theme.typography.subheading,
     color: theme.colors.text,
     fontWeight: '600',
   },
@@ -134,33 +124,5 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     lineHeight: 22,
   },
-  footerContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80, // Increased height for better gradient effect
-    backgroundColor: theme.colors.surface,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    zIndex: 2, // Ensure it's above other content
-  },
-  footerBorder: {
-    height: 1,
-    backgroundColor: theme.colors.border + '20',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  footerContent: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    alignItems: 'center',
-  },
-  footerText: {
-    ...theme.typography.caption,
-    color: theme.colors.text + 'A0',
-    fontWeight: '500',
-  },
+
 }); 

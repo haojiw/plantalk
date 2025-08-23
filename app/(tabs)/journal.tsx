@@ -1,24 +1,30 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+} from 'react-native-reanimated';
 
-import { HistoryHeader } from '@/components/HistoryHeader';
 import { HistoryList } from '@/components/HistoryList';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { PlantEntry, usePlant } from '@/context/PlantProvider';
+import { theme } from '@/styles/theme';
 
 interface SectionData {
   title: string;
   data: PlantEntry[];
 }
 
-export default function HistoryScreen() {
+export default function JournalScreen() {
   const { state, deleteEntry, addEntry } = usePlant();
   const [swipedEntryId, setSwipedEntryId] = useState<string | null>(null);
+  const opacity = useSharedValue(1);
   
   const handleOutsideInteraction = () => {
     if (swipedEntryId !== null) {
@@ -103,12 +109,6 @@ export default function HistoryScreen() {
     router.push(`/entry/${entry.id}`);
   };
 
-  const handleBack = () => {
-    // Add haptic feedback for consistency
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
-
   const handleEntryDelete = async (entryId: string) => {
     try {
       await deleteEntry(entryId);
@@ -152,9 +152,6 @@ export default function HistoryScreen() {
             audioUri: asset.uri,
             processingStage: 'transcribing',
           });
-          
-          // Navigate to history to show the new entry
-          router.replace('/history');
           
           // Show success message
           Alert.alert(
@@ -255,26 +252,64 @@ export default function HistoryScreen() {
     };
   };
 
-  return (
-    <View style={{ flex: 1 }}>
-      <ScreenWrapper>
-        <View style={{ flex: 1 }}>
-          {/* Header */}
-          <HistoryHeader onBack={handleBack} onAddAudio={handleAddAudio} />
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
-          {/* Entries List */}
-          <HistoryList
-            sectionedEntries={sectionedEntries}
-            swipedEntryId={swipedEntryId}
-            onEntryPress={handleEntryPress}
-            onEntryDelete={handleEntryDelete}
-            onSwipeOpen={setSwipedEntryId}
-            onOutsideInteraction={handleOutsideInteraction}
-            onScroll={handleScroll}
-            entriesCount={state.entries.length}
-          />
+  return (
+    <ScreenWrapper>
+      <Animated.View style={[styles.container, containerAnimatedStyle]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Journal</Text>
+            <Pressable onPress={handleAddAudio} style={styles.addButton}>
+              <Ionicons name="add" size={24} color={theme.colors.primary} />
+            </Pressable>
+          </View>
         </View>
-      </ScreenWrapper>
-    </View>
+
+        {/* Entries List */}
+        <HistoryList
+          sectionedEntries={sectionedEntries}
+          swipedEntryId={swipedEntryId}
+          onEntryPress={handleEntryPress}
+          onEntryDelete={handleEntryDelete}
+          onSwipeOpen={setSwipedEntryId}
+          onOutsideInteraction={handleOutsideInteraction}
+          onScroll={handleScroll}
+          entriesCount={state.entries.length}
+        />
+      </Animated.View>
+    </ScreenWrapper>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.md,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.title,
+    color: theme.colors.text,
+    fontWeight: '600',
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+}); 

@@ -70,27 +70,21 @@ export default function RootLayout() {
             animationDuration: 250,
             animationTypeForReplace: 'push',
           }}>
+            {/* Tabs as the primary navigation */}
             <Stack.Screen 
-              name="index" 
+              name="(tabs)" 
               options={{ 
                 headerShown: false,
                 animation: 'fade',
                 animationDuration: 250,
               }} 
             />
-            <Stack.Screen
-              name="history"
-              options={{
-                headerShown: false,
-                animation: 'fade',
-                animationDuration: 250,
-              }}
-            />
+            {/* Modal and detailed screens outside tabs */}
             <Stack.Screen 
               name="record" 
               options={{ 
                 animation: 'fade',
-                animationDuration: 250,
+                animationDuration: 300,
                 headerShown: false,
               }} 
             />

@@ -13,7 +13,7 @@ export interface UseAudioPlayerReturn {
   playbackProgress: number;
   isFinished: boolean;
   sound: Audio.Sound | null;
-  progressPosition: ReturnType<typeof useSharedValue>;
+  progressPosition: { value: number };
   handlePlayPause: () => Promise<void>;
   seekToPosition: (position: number) => Promise<void>;
   pauseAudio: () => Promise<void>;

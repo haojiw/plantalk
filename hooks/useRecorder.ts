@@ -11,7 +11,7 @@ export interface UseRecorderReturn {
   recordingState: RecordingState;
   duration: number;
   hasPermission: boolean;
-  waveformValues: Array<ReturnType<typeof useSharedValue>>;
+  waveformValues: Array<{ value: number }>;
   handlePauseRecording: () => Promise<void>;
   handleResumeRecording: () => Promise<void>;
   handleFinishRecording: () => Promise<void>;
@@ -258,7 +258,7 @@ export const useRecorder = (): UseRecorderReturn => {
         });
         
         // Navigate to history to show the new entry
-        router.replace('/history');
+        router.replace('/(tabs)/journal');
       }
     } catch (error) {
       console.error('Error finishing recording:', error);
