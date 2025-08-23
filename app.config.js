@@ -6,11 +6,12 @@ export default {
     slug: "plantalk",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "myapp",
-    userInterfaceStyle: "light",
+    icon: "./assets/images/bonsai.png",
+    scheme: "plantalk",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
     splash: {
-      image: "./assets/images/splash.png",
+      image: "./assets/images/bonsai.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
@@ -18,21 +19,32 @@ export default {
       "**/*"
     ],
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
+      bundleIdentifier: "com.haoji.plantalk"
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
+        foregroundImage: "./assets/images/bonsai.png",
         backgroundColor: "#ffffff"
-      }
+      },
+      edgeToEdgeEnabled: true
     },
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/bonsai.png"
     },
     plugins: [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/bonsai.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff"
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true
@@ -40,6 +52,9 @@ export default {
     extra: {
       WHISPER_API_KEY: process.env.WHISPER_API_KEY,
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      eas: {
+        projectId: "f32ebaa2-c90e-4631-a5ef-947dd6ca515c"
+      }
     }
   }
 }; 

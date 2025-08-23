@@ -34,6 +34,17 @@ import {
   Sora_600SemiBold,
 } from '@expo-google-fonts/sora';
 
+import {
+  Lora_400Regular,
+  Lora_700Bold,
+} from '@expo-google-fonts/lora';
+
+import {
+  Lato_400Regular,
+  Lato_700Bold,
+} from '@expo-google-fonts/lato';
+
+
 export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -54,6 +65,12 @@ export default function RootLayout() {
     // Sora fonts
     Sora_400Regular,
     Sora_600SemiBold,
+    // Lora fonts
+    Lora_400Regular,
+    Lora_700Bold,
+    // Lato fonts
+    Lato_400Regular,
+    Lato_700Bold,
   });
 
   if (!loaded) {

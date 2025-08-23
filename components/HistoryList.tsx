@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xs,
   },
   sectionTitle: {
-    ...theme.typography.subheading,
+    ...theme.typography.heading,
     color: theme.colors.text,
     fontWeight: '600',
   },

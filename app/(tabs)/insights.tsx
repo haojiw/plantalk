@@ -2,24 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { theme } from '@/styles/theme';
 
 export default function InsightsScreen() {
-  const [mirrorQuestion, setMirrorQuestion] = useState('');
   const opacity = useSharedValue(0);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -30,15 +31,60 @@ export default function InsightsScreen() {
     }, [])
   );
 
-  const handleAskMirror = () => {
-    // Placeholder for future AI functionality
-    console.log('Mirror question:', mirrorQuestion);
-    setMirrorQuestion('');
+  const toggleCard = (cardId: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
   };
 
   const containerAnimatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
   }));
+
+  const renderExpandableCard = (
+    id: string,
+    icon: string,
+    title: string,
+    content: React.ReactNode
+  ) => {
+    const isExpanded = expandedCards.has(id);
+    
+    return (
+      <View style={styles.cardContainer}>
+        <TouchableOpacity 
+          style={styles.card} 
+          onPress={() => toggleCard(id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.cardHeader}>
+            <Ionicons name={icon as any} size={24} color={theme.colors.primary} />
+            <Text style={styles.cardTitle}>{title}</Text>
+          </View>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={20} 
+            color={theme.colors.text + '60'} 
+          />
+        </TouchableOpacity>
+        
+        {isExpanded && (
+          <Animated.View 
+            style={styles.expandedContent}
+            entering={FadeIn.duration(300)}
+            exiting={FadeOut.duration(200)}
+          >
+            {content}
+          </Animated.View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <ScreenWrapper>
@@ -46,100 +92,77 @@ export default function InsightsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Insights</Text>
-          <Text style={styles.headerSubtitle}>Discover patterns in your journey</Text>
         </View>
 
-        {/* Weekly Recap Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="calendar-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Weekly Recap</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardContent}>
-              Your weekly summary will appear here. We'll analyze your journal entries to show patterns, 
-              themes, and highlights from the past seven days.
-            </Text>
-            <View style={styles.placeholderStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>—</Text>
-                <Text style={styles.statLabel}>Entries</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>—</Text>
-                <Text style={styles.statLabel}>Minutes</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>—</Text>
-                <Text style={styles.statLabel}>Topics</Text>
+        {/* Cards */}
+        <View style={styles.cardsContainer}>
+          {/* Weekly Recap Card */}
+          {renderExpandableCard(
+            'weekly-recap',
+            'calendar-outline',
+            'Weekly Recap',
+            <View>
+              <Text style={styles.contentText}>
+                Your weekly summary will appear here. We'll analyze your journal entries to show patterns, 
+                themes, and highlights from the past seven days.
+              </Text>
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>—</Text>
+                  <Text style={styles.statLabel}>Entries</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>—</Text>
+                  <Text style={styles.statLabel}>Minutes</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>—</Text>
+                  <Text style={styles.statLabel}>Topics</Text>
+                </View>
               </View>
             </View>
-          </View>
-        </View>
+          )}
 
-        {/* User Insights Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Your Patterns</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardContent}>
-              Based on your journal entries, we'll identify recurring themes, emotional patterns, 
-              and topics you frequently explore. This space will help you understand yourself better.
-            </Text>
-            <View style={styles.insightsList}>
-              <View style={styles.insightItem}>
-                <Ionicons name="heart-outline" size={16} color={theme.colors.text + '60'} />
-                <Text style={styles.insightText}>Emotional patterns coming soon</Text>
-              </View>
-              <View style={styles.insightItem}>
-                <Ionicons name="trending-up-outline" size={16} color={theme.colors.text + '60'} />
-                <Text style={styles.insightText}>Growth trends coming soon</Text>
-              </View>
-              <View style={styles.insightItem}>
-                <Ionicons name="bulb-outline" size={16} color={theme.colors.text + '60'} />
-                <Text style={styles.insightText}>Key topics coming soon</Text>
+          {/* Your Patterns Card */}
+          {renderExpandableCard(
+            'patterns',
+            'person-outline',
+            'Your Patterns',
+            <View>
+              <Text style={styles.contentText}>
+                Based on your journal entries, we'll identify recurring themes, emotional patterns, 
+                and topics you frequently explore. This space will help you understand yourself better.
+              </Text>
+              <View style={styles.patternsList}>
+                <View style={styles.patternItem}>
+                  <Ionicons name="heart-outline" size={16} color={theme.colors.text + '60'} />
+                  <Text style={styles.patternText}>Emotional patterns coming soon</Text>
+                </View>
+                <View style={styles.patternItem}>
+                  <Ionicons name="trending-up-outline" size={16} color={theme.colors.text + '60'} />
+                  <Text style={styles.patternText}>Growth trends coming soon</Text>
+                </View>
+                <View style={styles.patternItem}>
+                  <Ionicons name="bulb-outline" size={16} color={theme.colors.text + '60'} />
+                  <Text style={styles.patternText}>Key topics coming soon</Text>
+                </View>
               </View>
             </View>
-          </View>
-        </View>
+          )}
 
-        {/* Mirror Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="chatbubble-ellipses-outline" size={24} color={theme.colors.primary} />
-            <Text style={styles.sectionTitle}>Mirror</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardContent}>
-              Ask questions and get personalized insights based on your journal entries. 
-              The Mirror will help you reflect and discover new perspectives.
-            </Text>
-            <View style={styles.mirrorInput}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ask the Mirror anything about your journey..."
-                placeholderTextColor={theme.colors.text + '40'}
-                value={mirrorQuestion}
-                onChangeText={setMirrorQuestion}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-              <TouchableOpacity 
-                style={[
-                  styles.askButton, 
-                  { opacity: mirrorQuestion.trim() ? 1 : 0.5 }
-                ]}
-                onPress={handleAskMirror}
-                disabled={!mirrorQuestion.trim()}
-              >
-                <Ionicons name="send" size={16} color="white" />
-                <Text style={styles.askButtonText}>Ask Mirror</Text>
-              </TouchableOpacity>
+          {/* Mirror Card */}
+          {renderExpandableCard(
+            'mirror',
+            'chatbubble-ellipses-outline',
+            'Mirror',
+            <View>
+              <Text style={styles.contentText}>
+                Ask questions and get personalized insights based on your journal entries. 
+                The Mirror will help you reflect and discover new perspectives.
+              </Text>
+              <Text style={styles.comingSoonText}>Interactive Mirror coming soon...</Text>
             </View>
-          </View>
+          )}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -155,7 +178,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
   },
   headerTitle: {
     ...theme.typography.title,
@@ -163,41 +186,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
   },
-  headerSubtitle: {
-    ...theme.typography.body,
-    color: theme.colors.text + '60',
-    fontSize: 14,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
+  cardsContainer: {
     paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitle: {
-    ...theme.typography.subheading,
-    color: theme.colors.text,
-    fontWeight: '600',
-    marginLeft: theme.spacing.sm,
-  },
-  card: {
+  cardContainer: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
     ...theme.shadows.sm,
     borderWidth: 1,
     borderColor: theme.colors.text + '10',
+    overflow: 'hidden',
   },
-  cardContent: {
+  card: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 70,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cardTitle: {
+    ...theme.typography.subheading,
+    color: theme.colors.text,
+    fontWeight: '600',
+    marginLeft: theme.spacing.md,
+  },
+  expandedContent: {
+    padding: theme.spacing.lg,
+    paddingTop: theme.spacing.xs,
+  },
+  contentText: {
     ...theme.typography.body,
     color: theme.colors.text + '80',
     lineHeight: 20,
     marginBottom: theme.spacing.md,
   },
-  placeholderStats: {
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginTop: theme.spacing.sm,
@@ -216,50 +246,28 @@ const styles = StyleSheet.create({
     color: theme.colors.text + '60',
     fontSize: 12,
   },
-  insightsList: {
+  patternsList: {
     marginTop: theme.spacing.sm,
   },
-  insightItem: {
+  patternItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-  insightText: {
+  patternText: {
     ...theme.typography.body,
     color: theme.colors.text + '60',
     marginLeft: theme.spacing.sm,
     fontSize: 14,
   },
-  mirrorInput: {
+  comingSoonText: {
+    ...theme.typography.body,
+    color: theme.colors.text + '60',
+    fontStyle: 'italic',
+    textAlign: 'center',
     marginTop: theme.spacing.sm,
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.text + '20',
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.typography.body,
-    color: theme.colors.text,
-    minHeight: 80,
-    marginBottom: theme.spacing.md,
-  },
-  askButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
-  askButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    marginLeft: theme.spacing.xs,
-    fontSize: 14,
-  },
   bottomSpacing: {
-    height: theme.spacing.xl,
+    height: theme.spacing.lg,
   },
 }); 

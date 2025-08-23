@@ -120,14 +120,4 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
-  bottomHint: {
-    alignItems: 'center',
-    paddingBottom: theme.spacing.xl,
-  },
-  hintText: {
-    ...theme.typography.caption,
-    color: theme.colors.text + '60',
-    marginTop: theme.spacing.xs,
-    fontSize: 12,
-  },
 }); 

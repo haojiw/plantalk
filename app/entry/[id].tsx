@@ -251,6 +251,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...theme.typography.title,
+    fontSize: 24,
     color: theme.colors.text,
     marginBottom: theme.spacing.lg,
   },

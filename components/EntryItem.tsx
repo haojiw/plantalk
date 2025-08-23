@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   entryItem: {
     backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
   },
   entrySeparator: {
@@ -286,12 +286,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
     marginRight: theme.spacing.sm,
+    letterSpacing: -0.4,
   },
   entryPreview: {
     ...theme.typography.body,
     color: theme.colors.text + '70',
     lineHeight: 20,
-    fontSize: 15,
   },
   entryDuration: {
     ...theme.typography.caption,
