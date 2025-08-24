@@ -36,7 +36,7 @@ export default function TabLayout() {
         tabBarBackground: () => (
           <BlurView 
             intensity={50}
-            tint={colorScheme === 'dark' ? 'dark' : 'light'}
+            tint="light"
             style={{
               flex: 1,
               backgroundColor: theme.colors.background + 'A0',
