@@ -20,7 +20,12 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.haoji.plantalk"
+      bundleIdentifier: "com.haoji.plantalk",
+      infoPlist: {
+        UIBackgroundModes: [
+          "audio"
+        ]
+      }
     },
     android: {
       adaptiveIcon: {
@@ -43,6 +48,12 @@ export default {
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Plantalk needs microphone access to record your voice journal entries."
         }
       ]
     ],

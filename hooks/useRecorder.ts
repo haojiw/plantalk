@@ -70,6 +70,7 @@ export const useRecorder = (): UseRecorderReturn => {
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
         });
 
         // Start recording immediately

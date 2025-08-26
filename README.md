@@ -1,16 +1,41 @@
-# Product Vision & Design Brief: Plantalk
+# Plantalk 🌱
 
-1. The Vision & Purpose: Effortless Journaling, Gentle Growth
-The biggest barrier to a consistent journaling practice is friction. The effort of typing, organizing thoughts, and overcoming the blank page prevents many from starting and continuing.
+**A voice-first journal for effortless reflection and gentle growth.**
 
-Plantalk is a voice-first journal designed to make capturing your thoughts as effortless and spontaneous as speaking. Its primary purpose is to help users build a consistent and rewarding habit of voice journaling. Modern transcription technology makes this possible, turning fleeting spoken words into a searchable, organized personal diary.
 
-To encourage this habit, Plantalk uses a simple, powerful motivator: a virtual plant companion. The plant is a metaphor for personal growth, but its core function is to serve as a gentle and effective reward and gamification system. When you journal, your plant thrives. When you're away, it gently droops, inviting you back to your practice without a sense of failure.
+## The Problem: Journaling is Hard
 
-The app's intentionally calm and quiet interface is also functional. A centered state of mind leads to clearer, more organized voice entries, improving the quality of the journal itself. Whether for self-care, therapeutic reflection, or capturing creative ideas, Plantalk provides the structure to ensure the habit sticks.
+We all have meaningful days we want to remember and fleeting creative ideas we wish we'd captured. The standard solution is journaling, but the friction is real. Typing out long thoughts is a chore, and unstructured voice memos get lost and are impossible to search. The result? Our most valuable reflections and ideas fade away.
 
-2. The Core Experience: A Rewarding Ritual
-The user's journey is centered on a frictionless ritual. The daily interaction is simple: open the app, talk to your plant, and watch it grow. This positive feedback loop transforms journaling from a chore into a satisfying, two-minute daily practice. The user feels a sense of accomplishment and care, both for their plant and, by extension, for their own commitment to self-reflection.
+## The Solution: Just Talk
 
-3. The Design Language: Intentional Calm
-The visual style is minimalist, organic, and tactile. As seen in the mockups, it uses a muted color palette, soft shapes, and grainy textures to create a serene digital environment. This aesthetic is a deliberate choice to foster a calm headspace, conducive to both thoughtful reflection and coherent speaking.
+**Plantalk** is designed to be the most frictionless way to journal. It removes the barrier of the blank page by letting you capture your thoughts as naturally as you think them: by speaking.
+
+The core experience is simple:
+1.  **You Talk:** Open the app and record a voice entry.
+2.  **It Transcribes:** Using AI, your voice is converted into clean, organized text.
+3.  **You Reflect:** Your entries are saved, sorted by date, and easy to revisit.
+
+To help you build a consistent practice, Plantalk includes a virtual plant companion. When you journal, your plant thrives. It's a gentle, visual reminder of your commitment to your own growth and reflection.
+
+## Core Features
+
+* 🗣️ **Effortless Voice Recording:** Just press a button and speak your mind. No typing required.
+* 🤖 **AI-Powered Transcription:** Your voice memos are automatically transcribed using **OpenAI's Whisper API**.
+* ✨ **AI-Powered Refinement:** The raw transcription is then cleaned up, formatted into paragraphs, and given a relevant title by **Google's Gemini API**.
+* 📔 **Organized Journal:** Browse all your entries chronologically in a clean, calm interface.
+* 🪴 **Your Growth Companion:** Nurture a virtual plant that grows as you maintain your journaling habit—a beautiful metaphor for your personal growth.
+* 🧠 **AI Insights (Coming Soon):** Future updates will provide weekly recaps, identify recurring themes in your entries, and offer personalized insights for deeper reflection.
+
+## Tech Stack
+
+* **Framework:** React Native / Expo
+* **Navigation:** Expo Router
+* **UI & Animations:** React Native Reanimated
+* **Language:** TypeScript
+* **AI Services:** OpenAI Whisper (Transcription), Google Gemini (Refinement & Titling)
+* **Data Storage:** On-device storage via `expo-file-system` for privacy.
+
+## Project Status
+
+The app is currently available for testing via **TestFlight**. The core functionality of recording, transcribing, and viewing entries is complete. The next focus is on implementing the AI insights feature and preparing for an official App Store launch.
