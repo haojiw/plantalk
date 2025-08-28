@@ -1,8 +1,14 @@
 import { usePlant } from '@/context/PlantProvider';
-import { Audio } from 'expo-av';
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState
+} from 'expo-audio';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
 type RecordingState = 'recording' | 'paused' | 'saving' | 'error';
@@ -24,9 +30,12 @@ export const useRecorder = (): UseRecorderReturn => {
   const [duration, setDuration] = useState(0);
   const [hasPermission, setHasPermission] = useState(false);
   
-  const recording = useRef<Audio.Recording | null>(null);
   const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const { addEntry } = usePlant();
+
+  // Create audio recorder using expo-audio with high quality preset
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
 
   // Waveform animation with 9 bars for better visual effect
   const waveform1 = useSharedValue(0.3);
@@ -44,12 +53,28 @@ export const useRecorder = (): UseRecorderReturn => {
     waveform6, waveform7, waveform8, waveform9
   ];
 
+  // Monitor app state to ensure recording continues in background
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('App state changed to:', nextAppState);
+      // Keep recording active even when app goes to background
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        console.log('App went to background, recording should continue...');
+      } else if (nextAppState === 'active') {
+        console.log('App became active, checking recording status...');
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, []);
+
   // Auto-start recording on mount
   useEffect(() => {
     const startRecordingAutomatically = async () => {
       try {
-        // Request permissions
-        const { status } = await Audio.requestPermissionsAsync();
+        // Request permissions using expo-audio
+        const { status } = await AudioModule.requestRecordingPermissionsAsync();
         setHasPermission(status === 'granted');
         
         if (status !== 'granted') {
@@ -66,47 +91,23 @@ export const useRecorder = (): UseRecorderReturn => {
           return;
         }
 
-        // Configure audio mode
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
+        // Configure audio mode using expo-audio for background recording
+        await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          // Additional settings for robust background recording
+          interruptionMode: 'doNotMix', // Don't mix with other audio
+          interruptionModeAndroid: 'doNotMix', // Android-specific interruption handling
         });
 
         // Start recording immediately
         setDuration(0);
         setRecordingState('recording');
         
-        // Create new recording
-        recording.current = new Audio.Recording();
-        await recording.current.prepareToRecordAsync({
-          android: {
-            extension: '.m4a',
-            outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-            audioEncoder: Audio.AndroidAudioEncoder.AAC,
-            sampleRate: 44100,
-            numberOfChannels: 2,
-            bitRate: 128000,
-          },
-          ios: {
-            extension: '.m4a',
-            outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-            audioQuality: Audio.IOSAudioQuality.HIGH,
-            sampleRate: 44100,
-            numberOfChannels: 2,
-            bitRate: 128000,
-            linearPCMBitDepth: 16,
-            linearPCMIsBigEndian: false,
-            linearPCMIsFloat: false,
-          },
-          web: {
-            mimeType: 'audio/webm;codecs=opus',
-            bitsPerSecond: 128000,
-          },
-          isMeteringEnabled: true,
-        });
-        
-        await recording.current.startAsync();
+        // Prepare and start recording
+        await audioRecorder.prepareToRecordAsync();
+        audioRecorder.record();
         startMetering();
       } catch (error) {
         console.error('Error setting up audio or starting recording:', error);
@@ -136,37 +137,31 @@ export const useRecorder = (): UseRecorderReturn => {
       clearInterval(meteringInterval.current);
       meteringInterval.current = null;
     }
-    if (recording.current) {
-      recording.current.stopAndUnloadAsync().catch(e => console.error('Error on cleanup', e));
-      recording.current = null;
-    }
+    // expo-audio handles cleanup automatically
   };
 
   const startMetering = () => {
     meteringInterval.current = setInterval(async () => {
-      if (recording.current) {
+      if (recorderState.isRecording && recorderState.metering !== undefined) {
         try {
-          const status = await recording.current.getStatusAsync();
-          if (status.isRecording && status.metering !== undefined) {
-            // Convert dBFS to a 0-1 scale (dBFS ranges from -160 to 0)
-            // We'll focus on the -60 to 0 range for better visual response
-            const normalizedLevel = Math.max(0, Math.min(1, (status.metering + 60) / 60));
-            
-            // Add some randomization for more natural waveform appearance
-            const variation = 0.2;
-            const baseLevel = Math.max(0.1, normalizedLevel);
-            
-            // Update waveform bars with slight delays and variations
-            waveform1.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
-            waveform2.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 120 });
-            waveform3.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 110 });
-            waveform4.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 90 });
-            waveform5.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 130 });
-            waveform6.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
-            waveform7.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 115 });
-            waveform8.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 105 });
-            waveform9.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 125 });
-          }
+          // Convert dBFS to a 0-1 scale (dBFS ranges from -160 to 0)
+          // We'll focus on the -60 to 0 range for better visual response
+          const normalizedLevel = Math.max(0, Math.min(1, (recorderState.metering + 60) / 60));
+          
+          // Add some randomization for more natural waveform appearance
+          const variation = 0.2;
+          const baseLevel = Math.max(0.1, normalizedLevel);
+          
+          // Update waveform bars with slight delays and variations
+          waveform1.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
+          waveform2.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 120 });
+          waveform3.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 110 });
+          waveform4.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 90 });
+          waveform5.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 130 });
+          waveform6.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
+          waveform7.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 115 });
+          waveform8.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 105 });
+          waveform9.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 125 });
         } catch (error) {
           console.error('Error getting metering:', error);
         }
@@ -217,11 +212,9 @@ export const useRecorder = (): UseRecorderReturn => {
 
   const handlePauseRecording = async () => {
     try {
-      if (recording.current) {
-        await recording.current.pauseAsync();
-        setRecordingState('paused');
-        stopMetering();
-      }
+      audioRecorder.pause();
+      setRecordingState('paused');
+      stopMetering();
     } catch (error) {
       console.error('Error pausing recording:', error);
     }
@@ -229,11 +222,9 @@ export const useRecorder = (): UseRecorderReturn => {
 
   const handleResumeRecording = async () => {
     try {
-      if (recording.current) {
-        await recording.current.startAsync();
-        setRecordingState('recording');
-        startMetering();
-      }
+      audioRecorder.record();
+      setRecordingState('recording');
+      startMetering();
     } catch (error) {
       console.error('Error resuming recording:', error);
     }
@@ -241,26 +232,27 @@ export const useRecorder = (): UseRecorderReturn => {
 
   const handleFinishRecording = async () => {
     try {
-      if (recording.current) {
-        setRecordingState('saving');
-        
-        stopMetering();
-        const uri = recording.current.getURI();
-        
-        // Save entry immediately (transcription will happen in background)
-        await addEntry({
-          date: new Date().toISOString(),
-          title: 'Processing...',
-          text: '', 
-          rawText: '',
-          duration,
-          audioUri: uri || '',
-          processingStage: 'transcribing',
-        });
-        
-        // Navigate to history to show the new entry
-        router.replace('/(tabs)/journal');
-      }
+      setRecordingState('saving');
+      
+      stopMetering();
+      await audioRecorder.stop();
+      
+      // Get the recording URI
+      const uri = audioRecorder.uri;
+      
+      // Save entry immediately (transcription will happen in background)
+      await addEntry({
+        date: new Date().toISOString(),
+        title: 'Processing...',
+        text: '', 
+        rawText: '',
+        duration,
+        audioUri: uri || '',
+        processingStage: 'transcribing',
+      });
+      
+      // Navigate to history to show the new entry
+      router.replace('/(tabs)/journal');
     } catch (error) {
       console.error('Error finishing recording:', error);
       setRecordingState('error');

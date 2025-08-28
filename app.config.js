@@ -24,6 +24,14 @@ export default {
       infoPlist: {
         UIBackgroundModes: [
           "audio"
+        ],
+        NSMicrophoneUsageDescription: "Plantalk needs microphone access to record your voice journal entries.",
+        // Ensure audio session continues in background
+        AVAudioSessionCategoryPlayAndRecord: true,
+        AVAudioSessionCategoryOptions: [
+          "AVAudioSessionCategoryOptionMixWithOthers",
+          "AVAudioSessionCategoryOptionAllowBluetooth",
+          "AVAudioSessionCategoryOptionDefaultToSpeaker"
         ]
       }
     },
@@ -32,7 +40,13 @@ export default {
         foregroundImage: "./assets/images/bonsai.png",
         backgroundColor: "#ffffff"
       },
-      edgeToEdgeEnabled: true
+      edgeToEdgeEnabled: true,
+      permissions: [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.WAKE_LOCK",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+      ]
     },
     web: {
       bundler: "metro",
@@ -51,7 +65,7 @@ export default {
         }
       ],
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": "Plantalk needs microphone access to record your voice journal entries."
         }

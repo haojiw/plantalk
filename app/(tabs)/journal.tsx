@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
@@ -7,9 +7,9 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
 
 import { HistoryList } from '@/components/HistoryList';
@@ -193,23 +193,22 @@ export default function JournalScreen() {
 
     // Try multiple methods to get the duration
     try {
-      // Method 1: Try to get duration using expo-av (most reliable for supported formats)
-      console.log('Attempting to extract duration with expo-av...');
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: asset.uri },
-        { shouldPlay: false }
-      );
+      // Method 1: Try to get duration using expo-audio (most reliable for supported formats)
+      console.log('Attempting to extract duration with expo-audio...');
+      const player = createAudioPlayer({ uri: asset.uri });
       
-      const status = await sound.getStatusAsync();
-      if (status.isLoaded && status.durationMillis) {
-        duration = Math.round(status.durationMillis / 1000); // Convert to seconds
-        console.log(`Duration extracted with expo-av: ${duration}s`);
+      // Wait a bit for the audio to load and get duration
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (player.duration > 0) {
+        duration = Math.round(player.duration); // Duration is already in seconds
+        console.log(`Duration extracted with expo-audio: ${duration}s`);
       }
       
-      // Clean up the sound object
-      await sound.unloadAsync();
+      // Clean up the player object
+      player.remove();
     } catch (error) {
-      console.log('Could not extract duration with expo-av:', error);
+      console.log('Could not extract duration with expo-audio:', error);
     }
 
     // Method 2: Try using asset metadata from document picker
