@@ -39,7 +39,9 @@ export default function EntryDetailScreen() {
 
   const { showOptions } = useEntryOptions({ 
     entry, 
-    updateEntry, 
+    updateEntry,
+    updateEntryProgress,
+    updateEntryTranscription,
     onEditEntry: handleEditEntry 
   });
 

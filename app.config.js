@@ -6,7 +6,7 @@ export default {
     slug: "plantalk",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/bonsai.png",
+    icon: "./assets/images/icon.png",
     scheme: "plantalk",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -37,7 +37,7 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/bonsai.png",
+        foregroundImage: "./assets/images/icon.png",
         backgroundColor: "#ffffff"
       },
       edgeToEdgeEnabled: true,
@@ -51,7 +51,7 @@ export default {
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/bonsai.png"
+      favicon: "./assets/images/icon.png"
     },
     plugins: [
       "expo-router",

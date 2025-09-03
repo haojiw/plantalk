@@ -1,17 +1,23 @@
 import { PlantEntry } from '@/context/PlantProvider';
+import { transcriptionService } from '@/services/TranscriptionService';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
 export interface UseEntryOptionsProps {
   entry: PlantEntry | undefined;
   updateEntry: (id: string, updates: Partial<PlantEntry>) => Promise<void>;
+  updateEntryProgress: (id: string, stage: 'transcribing' | 'refining') => void;
+  updateEntryTranscription: (id: string, result: any, status: 'completed' | 'failed') => void;
   onEditEntry: () => void;
 }
 
 export interface UseEntryOptionsReturn {
   showOptions: () => void;
+  showRawTranscription: () => void;
 }
 
-export const useEntryOptions = ({ entry, updateEntry, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
+export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updateEntryTranscription, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
   const updateEntryDate = async (newDate: Date) => {
     if (!entry) return;
     
@@ -139,6 +145,127 @@ export const useEntryOptions = ({ entry, updateEntry, onEditEntry }: UseEntryOpt
     }
   };
 
+  const showRawTranscription = () => {
+    if (!entry) return;
+    
+    const rawText = entry.rawText || 'No raw transcription available';
+    
+    Alert.alert(
+      'Raw Transcription',
+      rawText,
+      [{ text: 'Close', style: 'cancel' }],
+      { 
+        userInterfaceStyle: 'light'
+      }
+    );
+  };
+
+  const handleRetranscribe = async () => {
+    if (!entry || !entry.audioUri) {
+      Alert.alert('Error', 'No audio file available for re-transcription');
+      return;
+    }
+
+    Alert.alert(
+      'Re-transcribe Audio',
+      'This will overwrite the current transcription. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Re-transcribe',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Update the entry to show it's processing
+              await updateEntry(entry.id, {
+                text: 'Re-transcribing...',
+                processingStage: 'transcribing'
+              });
+
+              // Add to transcription queue
+              transcriptionService.addToQueue({
+                entryId: entry.id,
+                audioUri: entry.audioUri!,
+                onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
+                  updateEntryProgress(entryId, stage);
+                },
+                onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
+                  if (status === 'completed') {
+                    updateEntryTranscription(entryId, {
+                      ...result,
+                      processingStage: result.processingStage || 'completed'
+                    }, status);
+                    Alert.alert('Success', 'Re-transcription completed successfully');
+                  } else {
+                    updateEntryTranscription(entryId, {
+                      refinedTranscription: result.refinedTranscription || 'Re-transcription failed. Please try again.',
+                      rawTranscription: result.rawTranscription || '',
+                      aiGeneratedTitle: result.aiGeneratedTitle || entry.title,
+                      processingStage: result.processingStage || 'transcribing_failed'
+                    }, status);
+                    Alert.alert('Error', 'Re-transcription failed. Please try again.');
+                  }
+                }
+              });
+            } catch (error) {
+              console.error('Error starting re-transcription:', error);
+              Alert.alert('Error', 'Failed to start re-transcription');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDownloadAudio = async () => {
+    if (!entry || !entry.audioUri) {
+      Alert.alert('Error', 'No audio file available for download');
+      return;
+    }
+
+    try {
+      // Check if the file exists
+      const fileInfo = await FileSystem.getInfoAsync(entry.audioUri);
+      if (!fileInfo.exists) {
+        Alert.alert('Error', 'Audio file not found');
+        return;
+      }
+
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Error', 'Sharing is not available on this device');
+        return;
+      }
+
+      // Generate a user-friendly filename
+      const entryDate = new Date(entry.date);
+      const dateString = entryDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      const timeString = entryDate.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+      const fileName = `${entry.title.replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}_${dateString}_${timeString}.m4a`;
+
+      // Copy to a temporary location with the desired filename
+      const tempUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.copyAsync({
+        from: entry.audioUri,
+        to: tempUri
+      });
+
+      // Share the file
+      await Sharing.shareAsync(tempUri, {
+        mimeType: 'audio/m4a',
+        dialogTitle: 'Save Audio File'
+      });
+
+      // Clean up the temporary file
+      await FileSystem.deleteAsync(tempUri);
+      
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      Alert.alert('Error', 'Failed to download audio file');
+    }
+  };
+
   const showOptions = () => {
     if (!entry) return;
 
@@ -147,14 +274,33 @@ export const useEntryOptions = ({ entry, updateEntry, onEditEntry }: UseEntryOpt
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: 'Entry Options',
-          options: ['Cancel', 'Edit Entry', 'Change Date & Time'],
+          options: [
+            'Cancel', 
+            'Edit Entry', 
+            'Change Date & Time', 
+            'Show Raw Transcription', 
+            'Re-transcribe Audio', 
+            'Download Audio'
+          ],
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
-          if (buttonIndex === 1) {
-            onEditEntry();
-          } else if (buttonIndex === 2) {
-            showDateTimePicker();
+          switch (buttonIndex) {
+            case 1:
+              onEditEntry();
+              break;
+            case 2:
+              showDateTimePicker();
+              break;
+            case 3:
+              showRawTranscription();
+              break;
+            case 4:
+              handleRetranscribe();
+              break;
+            case 5:
+              handleDownloadAudio();
+              break;
           }
         }
       );
@@ -166,6 +312,9 @@ export const useEntryOptions = ({ entry, updateEntry, onEditEntry }: UseEntryOpt
           { text: 'Cancel', style: 'cancel' },
           { text: 'Edit Entry', onPress: onEditEntry },
           { text: 'Change Date & Time', onPress: showDateTimePicker },
+          { text: 'Show Raw Transcription', onPress: showRawTranscription },
+          { text: 'Re-transcribe Audio', onPress: handleRetranscribe },
+          { text: 'Download Audio', onPress: handleDownloadAudio },
         ]
       );
     }
@@ -173,5 +322,6 @@ export const useEntryOptions = ({ entry, updateEntry, onEditEntry }: UseEntryOpt
 
   return {
     showOptions,
+    showRawTranscription,
   };
 }; 
