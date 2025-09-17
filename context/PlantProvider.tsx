@@ -1,5 +1,5 @@
 import { transcriptionService } from '@/services/TranscriptionService';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export interface PlantEntry {
@@ -229,6 +229,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
       transcriptionService.addToQueue({
         entryId: newEntry.id,
         audioUri: newEntry.audioUri,
+        audioDurationSeconds: newEntry.duration,
         onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
           updateEntryProgress(entryId, stage);
         },

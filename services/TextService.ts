@@ -24,7 +24,7 @@ interface GeminiResponse {
   }>;
 }
 
-interface refinedTranscription {
+interface RefinedTranscription {
   title: string;
   formattedText: string;
 }
@@ -51,7 +51,7 @@ async function fetchWithTimeout(
   }
 }
 
-class GeminiService {
+class TextService {
   private apiKey: string;
   private baseUrl: string;
 
@@ -64,7 +64,7 @@ class GeminiService {
     }
   }
 
-  async refineTranscription(rawText: string): Promise<refinedTranscription> {
+  async refineTranscription(rawText: string): Promise<RefinedTranscription> {
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
     }
@@ -73,7 +73,7 @@ class GeminiService {
       throw new Error('No text provided for refinement');
     }
 
-    console.log(`[GeminiService] Starting text refinement, length: ${rawText.length}`);
+    console.log(`[TextService] Starting text refinement, length: ${rawText.length}`);
 
     const prompt = `You are an advanced machine specialized in processing voice transcriptions.
 
@@ -114,7 +114,7 @@ Respond in this exact JSON format:
         }
       };
 
-      console.log(`[GeminiService] Sending request to Gemini API...`);
+      console.log(`[TextService] Sending request to Gemini API...`);
 
       const data = await fetchWithTimeout(
         this.baseUrl,
@@ -128,14 +128,14 @@ Respond in this exact JSON format:
         30000 // 30 second timeout
       );
 
-      console.log(`[GeminiService] Gemini API response received`);
+      console.log(`[TextService] Gemini API response received`);
 
       if (!data.candidates || data.candidates.length === 0) {
         throw new Error('No response from Gemini API');
       }
 
       const responseText = data.candidates[0].content.parts[0].text;
-      console.log(`[GeminiService] Response text length: ${responseText.length}`);
+      console.log(`[TextService] Response text length: ${responseText.length}`);
       
       // Parse the JSON response
       try {
@@ -149,7 +149,7 @@ Respond in this exact JSON format:
           cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
         }
         
-        console.log(`[GeminiService] Cleaned response for parsing:`, cleanedResponse);
+        console.log(`[TextService] Cleaned response for parsing:`, cleanedResponse);
         
         const parsed = JSON.parse(cleanedResponse);
         
@@ -157,7 +157,7 @@ Respond in this exact JSON format:
           throw new Error('Invalid response format from Gemini');
         }
 
-        console.log(`[GeminiService] Refinement successful, title: "${parsed.title}"`);
+        console.log(`[TextService] Refinement successful, title: "${parsed.title}"`);
         return {
           title: parsed.title.trim(),
           formattedText: parsed.formattedText.trim()
@@ -180,7 +180,7 @@ Respond in this exact JSON format:
         const textMatch = textToMatch.match(/"formattedText":\s*"((?:[^"\\]|\\.)*)"/);
         
         if (titleMatch && textMatch) {
-          console.log(`[GeminiService] Fallback parsing successful`);
+          console.log(`[TextService] Fallback parsing successful`);
           return {
             title: titleMatch[1].trim(),
             formattedText: textMatch[1].replace(/\\"/g, '"').trim()
@@ -188,7 +188,7 @@ Respond in this exact JSON format:
         }
         
         // Last resort fallback
-        console.warn(`[GeminiService] Using fallback refinement`);
+        console.warn(`[TextService] Using fallback refinement`);
         return {
           title: `Journal Entry - ${new Date().toLocaleDateString()}`,
           formattedText: rawText // Return original text if parsing fails
@@ -202,4 +202,4 @@ Respond in this exact JSON format:
 }
 
 // Create singleton instance
-export const geminiService = new GeminiService(); 
+export const textService = new TextService();

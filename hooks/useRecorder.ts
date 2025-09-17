@@ -1,10 +1,10 @@
 import { usePlant } from '@/context/PlantProvider';
 import {
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState
+    AudioModule,
+    RecordingPresets,
+    setAudioModeAsync,
+    useAudioRecorder,
+    useAudioRecorderState
 } from 'expo-audio';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -188,12 +188,24 @@ export const useRecorder = (): UseRecorderReturn => {
     waveform9.value = withTiming(idleHeight, { duration: 300 });
   };
 
-  // Timer for recording duration
+  // Timer for recording duration with 1-hour limit
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (recordingState === 'recording') {
       interval = setInterval(() => {
-        setDuration(prev => prev + 1);
+        setDuration(prev => {
+          const newDuration = prev + 1;
+          // Check if we've reached the 1-hour limit (3600 seconds)
+          if (newDuration >= 3600) {
+            Alert.alert(
+              'Recording Limit Reached',
+              'The maximum recording duration is 1 hour. Your recording will be saved automatically.',
+              [{ text: 'OK', onPress: () => handleFinishRecording() }]
+            );
+            return 3600; // Cap at exactly 1 hour
+          }
+          return newDuration;
+        });
       }, 1000);
     }
     

@@ -1,6 +1,6 @@
 import { PlantEntry } from '@/context/PlantProvider';
 import { transcriptionService } from '@/services/TranscriptionService';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
@@ -186,6 +186,7 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
               transcriptionService.addToQueue({
                 entryId: entry.id,
                 audioUri: entry.audioUri!,
+                audioDurationSeconds: entry.duration,
                 onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
                   updateEntryProgress(entryId, stage);
                 },

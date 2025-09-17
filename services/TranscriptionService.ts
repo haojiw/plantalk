@@ -1,9 +1,10 @@
-import { geminiService } from './GeminiService';
-import { openAIService } from './OpenAIService';
+import { speechService } from './SpeechService';
+import { textService } from './TextService';
 
 interface TranscriptionTask {
   entryId: string;
   audioUri: string;
+  audioDurationSeconds?: number; // Audio duration in seconds for dynamic timeout calculation
   onProgress: (entryId: string, stage: 'transcribing' | 'refining', progress?: number) => void;
   onComplete: (entryId: string, result: TranscriptionResult, status: 'completed' | 'failed') => void;
 }
@@ -48,20 +49,20 @@ class TranscriptionService {
     try {
       console.log(`[TranscriptionService] Starting processing for entry ${task.entryId}`);
       
-      // Step 1: Transcribe audio with Whisper
+      // Step 1: Transcribe audio with Gemini
       task.onProgress(task.entryId, 'transcribing');
-      console.log(`[TranscriptionService] Starting Whisper transcription...`);
+      console.log(`[TranscriptionService] Starting Gemini transcription...`);
       
       let rawTranscription: string;
       try {
-        rawTranscription = await openAIService.transcribeAudio(task.audioUri);
-        console.log(`[TranscriptionService] Whisper completed. Raw text length: ${rawTranscription.length}`);
+        rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
+        console.log(`[TranscriptionService] Gemini completed. Raw text length: ${rawTranscription.length}`);
         
         if (!rawTranscription.trim()) {
-          throw new Error('No transcription returned from Whisper');
+          throw new Error('No transcription returned from Gemini');
         }
       } catch (transcriptionError) {
-        console.error(`[TranscriptionService] Whisper transcription failed:`, transcriptionError);
+        console.error(`[TranscriptionService] Gemini transcription failed:`, transcriptionError);
         
         // Handle transcription-specific failure
         task.onComplete(task.entryId, {
@@ -73,13 +74,13 @@ class TranscriptionService {
         return;
       }
 
-      // Step 2: Refine with Gemini
+      // Step 2: Refine with Gemini text service
       task.onProgress(task.entryId, 'refining');
-      console.log(`[TranscriptionService] Starting Gemini refinement...`);
+      console.log(`[TranscriptionService] Starting text refinement...`);
       
       try {
-        const refined = await geminiService.refineTranscription(rawTranscription);
-        console.log(`[TranscriptionService] Gemini completed. Title: "${refined.title}"`);
+        const refined = await textService.refineTranscription(rawTranscription);
+        console.log(`[TranscriptionService] Text refinement completed. Title: "${refined.title}"`);
 
         // Step 3: Return complete result
         const result: TranscriptionResult = {
@@ -92,7 +93,7 @@ class TranscriptionService {
         console.log(`[TranscriptionService] Processing completed successfully for entry ${task.entryId}`);
         task.onComplete(task.entryId, result, 'completed');
       } catch (refinementError) {
-        console.error(`[TranscriptionService] Gemini refinement failed:`, refinementError);
+        console.error(`[TranscriptionService] Text refinement failed:`, refinementError);
         
         // Handle refinement-specific failure - we still have the raw transcription
         task.onComplete(task.entryId, {

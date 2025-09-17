@@ -93,6 +93,7 @@ export default function EntryDetailScreen() {
       transcriptionService.addToQueue({
         entryId: entry.id,
         audioUri: entry.audioUri,
+        audioDurationSeconds: entry.duration,
         onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
           updateEntryProgress(entryId, stage);
         },
@@ -129,9 +130,9 @@ export default function EntryDetailScreen() {
       
       // We'll simulate calling just the refinement part
       // Since we already have raw text, we just need to refine it
-      const { geminiService } = await import('@/services/GeminiService');
+      const { textService } = await import('@/services/TextService');
       
-      const refined = await geminiService.refineTranscription(entry.rawText);
+      const refined = await textService.refineTranscription(entry.rawText);
       
       // Update with the refined result
       updateEntryTranscription(entry.id, {
