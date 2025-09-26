@@ -1,12 +1,12 @@
-import { PlantEntry } from '@/context/PlantProvider';
+import { JournalEntry } from '@/context/JournalProvider';
 import { transcriptionService } from '@/services/TranscriptionService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
 export interface UseEntryOptionsProps {
-  entry: PlantEntry | undefined;
-  updateEntry: (id: string, updates: Partial<PlantEntry>) => Promise<void>;
+  entry: JournalEntry | undefined;
+  updateEntry: (id: string, updates: Partial<JournalEntry>) => Promise<void>;
   updateEntryProgress: (id: string, stage: 'transcribing' | 'refining') => void;
   updateEntryTranscription: (id: string, result: any, status: 'completed' | 'failed') => void;
   onEditEntry: () => void;

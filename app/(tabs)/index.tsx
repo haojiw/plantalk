@@ -10,11 +10,11 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { usePlant } from '@/context/PlantProvider';
+import { useJournal } from '@/context/JournalProvider';
 import { theme } from '@/styles/theme';
 
 export default function EntryScreen() {
-  const { state } = usePlant();
+  const { state } = useJournal();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 

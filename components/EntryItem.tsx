@@ -13,16 +13,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { PlantEntry } from '@/context/PlantProvider';
+import { JournalEntry } from '@/context/JournalProvider';
 import { theme } from '@/styles/theme';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 interface EntryItemProps {
-  item: PlantEntry;
+  item: JournalEntry;
   isLast: boolean;
   swipedEntryId: string | null;
-  onEntryPress: (entry: PlantEntry) => void;
+  onEntryPress: (entry: JournalEntry) => void;
   onEntryDelete: (entryId: string) => void;
   onSwipeOpen: (entryId: string | null) => void;
 }
@@ -42,7 +42,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   const processingPulse = useSharedValue(1); // For processing indicator animation
 
   // Helper function to get appropriate preview text based on processing stage
-  const getPreviewText = (entry: PlantEntry) => {
+  const getPreviewText = (entry: JournalEntry) => {
     if (entry.processingStage === 'transcribing') {
       return 'Transcribing audio...';
     } else if (entry.processingStage === 'refining') {

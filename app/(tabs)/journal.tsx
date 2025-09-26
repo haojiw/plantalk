@@ -14,16 +14,16 @@ import Animated, {
 
 import { HistoryList } from '@/components/HistoryList';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { PlantEntry, usePlant } from '@/context/PlantProvider';
+import { JournalEntry, useJournal } from '@/context/JournalProvider';
 import { theme } from '@/styles/theme';
 
 interface SectionData {
   title: string;
-  data: PlantEntry[];
+  data: JournalEntry[];
 }
 
 export default function JournalScreen() {
-  const { state, deleteEntry, addEntry } = usePlant();
+  const { state, deleteEntry, addEntry } = useJournal();
   const [swipedEntryId, setSwipedEntryId] = useState<string | null>(null);
   const opacity = useSharedValue(0);
 
@@ -58,7 +58,7 @@ export default function JournalScreen() {
     const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const sections: SectionData[] = [];
-    const sectionMap = new Map<string, PlantEntry[]>();
+    const sectionMap = new Map<string, JournalEntry[]>();
 
     state.entries.forEach(entry => {
       const entryDate = new Date(entry.date);
@@ -115,7 +115,7 @@ export default function JournalScreen() {
     return sections;
   }, [state.entries]);
 
-  const handleEntryPress = (entry: PlantEntry) => {
+  const handleEntryPress = (entry: JournalEntry) => {
     router.push(`/entry/${entry.id}`);
   };
 

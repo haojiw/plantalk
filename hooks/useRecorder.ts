@@ -1,10 +1,10 @@
-import { usePlant } from '@/context/PlantProvider';
+import { useJournal } from '@/context/JournalProvider';
 import {
-    AudioModule,
-    RecordingPresets,
-    setAudioModeAsync,
-    useAudioRecorder,
-    useAudioRecorderState
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState
 } from 'expo-audio';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -31,7 +31,7 @@ export const useRecorder = (): UseRecorderReturn => {
   const [hasPermission, setHasPermission] = useState(false);
   
   const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { addEntry } = usePlant();
+  const { addEntry } = useJournal();
 
   // Create audio recorder using expo-audio with high quality preset
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);

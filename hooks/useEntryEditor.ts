@@ -1,10 +1,10 @@
-import { PlantEntry } from '@/context/PlantProvider';
+import { JournalEntry } from '@/context/JournalProvider';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
 export interface UseEntryEditorProps {
-  entry: PlantEntry | undefined;
-  updateEntry: (id: string, updates: Partial<PlantEntry>) => Promise<void>;
+  entry: JournalEntry | undefined;
+  updateEntry: (id: string, updates: Partial<JournalEntry>) => Promise<void>;
 }
 
 export interface UseEntryEditorReturn {

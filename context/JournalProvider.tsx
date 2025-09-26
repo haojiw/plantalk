@@ -2,7 +2,7 @@ import { transcriptionService } from '@/services/TranscriptionService';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-export interface PlantEntry {
+export interface JournalEntry {
   id: string;
   date: string; // ISO date string
   title: string;
@@ -13,27 +13,27 @@ export interface PlantEntry {
   processingStage?:  'transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed';
 }
 
-export interface PlantState {
+export interface JournalState {
   streak: number; // consecutive days
   lastEntryISO: string | null; // ISO date string of last entry
-  entries: PlantEntry[];
+  entries: JournalEntry[];
 }
 
-interface PlantContextType {
-  state: PlantState;
-  addEntry: (entryData: Omit<PlantEntry, 'id'>) => Promise<void>;
+interface JournalContextType {
+  state: JournalState;
+  addEntry: (entryData: Omit<JournalEntry, 'id'>) => Promise<void>;
   deleteEntry: (entryId: string) => Promise<void>;
-  updateEntry: (entryId: string, updates: Partial<PlantEntry>) => Promise<void>;
+  updateEntry: (entryId: string, updates: Partial<JournalEntry>) => Promise<void>;
   updateEntryTranscription: (entryId: string, result: any, status: 'completed' | 'failed') => void;
   updateEntryProgress: (entryId: string, stage: 'transcribing' | 'refining') => void;
   getDaysSinceLastEntry: () => number;
   resetStreak: () => void;
 }
 
-const PlantContext = createContext<PlantContextType | undefined>(undefined);
+const JournalContext = createContext<JournalContextType | undefined>(undefined);
 
 // Create dummy data for development and testing
-const createDummyData = (): PlantEntry[] => {
+const createDummyData = (): JournalEntry[] => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -80,7 +80,7 @@ const createDummyData = (): PlantEntry[] => {
   ];
 };
 
-const INITIAL_STATE: PlantState = {
+const INITIAL_STATE: JournalState = {
   streak: 2, // Set to 2 since we have entries for today and yesterday
   lastEntryISO: new Date().toISOString(), // Set to today since we have a dummy entry for today
   entries: createDummyData(),
@@ -90,12 +90,12 @@ const INITIAL_STATE: PlantState = {
 const ENTRIES_FILE_PATH = `${FileSystem.documentDirectory}entries.json`;
 const AUDIO_DIR_PATH = `${FileSystem.documentDirectory}audio/`;
 
-interface PlantProviderProps {
+interface JournalProviderProps {
   children: ReactNode;
 }
 
-export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
-  const [state, setState] = useState<PlantState>(INITIAL_STATE);
+export const JournalProvider: React.FC<JournalProviderProps> = ({ children }) => {
+  const [state, setState] = useState<JournalState>(INITIAL_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Ensure audio directory exists
@@ -111,7 +111,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   };
 
   // NEW: Cleanup orphaned audio files
-  const cleanupOrphanedAudio = async (currentEntries: PlantEntry[]) => {
+  const cleanupOrphanedAudio = async (currentEntries: JournalEntry[]) => {
     try {
       const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIR_PATH);
       if (!dirInfo.exists) return; // No directory, no orphans
@@ -141,7 +141,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
       const fileInfo = await FileSystem.getInfoAsync(ENTRIES_FILE_PATH);
       if (fileInfo.exists) {
         const fileContent = await FileSystem.readAsStringAsync(ENTRIES_FILE_PATH);
-        const savedState: PlantState = JSON.parse(fileContent);
+        const savedState: JournalState = JSON.parse(fileContent);
         setState(savedState);
         // Run cleanup after loading the state
         await cleanupOrphanedAudio(savedState.entries);
@@ -155,7 +155,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   };
 
   // Save entries to persistent storage
-  const saveEntries = async (newState: PlantState) => {
+  const saveEntries = async (newState: JournalState) => {
     try {
       await FileSystem.writeAsStringAsync(ENTRIES_FILE_PATH, JSON.stringify(newState));
     } catch (error) {
@@ -209,8 +209,8 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   };
 
   // Add a new entry and optionally start transcription
-  const addEntry = async (entryData: Omit<PlantEntry, 'id'>): Promise<void> => {
-    const newEntry: PlantEntry = {
+  const addEntry = async (entryData: Omit<JournalEntry, 'id'>): Promise<void> => {
+    const newEntry: JournalEntry = {
       ...entryData,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
     };
@@ -234,7 +234,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
           updateEntryProgress(entryId, stage);
         },
         onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
-          console.log(`[PlantProvider] onComplete called:`, { entryId, result, status });
+          console.log(`[JournalProvider] onComplete called:`, { entryId, result, status });
           
           if (status === 'completed') {
             // Update with successful result
@@ -244,7 +244,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
             }, status);
           } else {
             // Handle error case - result already contains the appropriate processingStage
-            console.log(`[PlantProvider] Handling error case with processingStage:`, result.processingStage);
+            console.log(`[JournalProvider] Handling error case with processingStage:`, result.processingStage);
             updateEntryTranscription(entryId, {
               refinedTranscription: result.refinedTranscription || 'Transcription failed. Please try again.',
               rawTranscription: result.rawTranscription || '',
@@ -376,7 +376,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     }
   };
 
-  const updateEntry = async (entryId: string, updates: Partial<PlantEntry>) => {
+  const updateEntry = async (entryId: string, updates: Partial<JournalEntry>) => {
     setState(prev => {
       const updatedEntries = prev.entries.map(entry => {
         if (entry.id === entryId) {
@@ -469,7 +469,7 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
     }
   }, [isLoaded]);
 
-  const contextValue: PlantContextType = {
+  const contextValue: JournalContextType = {
     state,
     addEntry,
     deleteEntry,
@@ -481,16 +481,16 @@ export const PlantProvider: React.FC<PlantProviderProps> = ({ children }) => {
   };
 
   return (
-    <PlantContext.Provider value={contextValue}>
+    <JournalContext.Provider value={contextValue}>
       {children}
-    </PlantContext.Provider>
+    </JournalContext.Provider>
   );
 };
 
-export const usePlant = (): PlantContextType => {
-  const context = useContext(PlantContext);
+export const useJournal = (): JournalContextType => {
+  const context = useContext(JournalContext);
   if (!context) {
-    throw new Error('usePlant must be used within a PlantProvider');
+    throw new Error('useJournal must be used within a JournalProvider');
   }
   return context;
 }; 

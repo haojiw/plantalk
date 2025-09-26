@@ -1,11 +1,11 @@
-import { PlantEntry } from '@/context/PlantProvider';
+import { JournalEntry } from '@/context/JournalProvider';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface EntryContentProps {
-  entry: PlantEntry;
+  entry: JournalEntry;
   isEditing: boolean;
   editText: string;
   setEditText: (text: string) => void;

@@ -1,5 +1,5 @@
 import { EntryItem } from '@/components/EntryItem';
-import { PlantEntry } from '@/context/PlantProvider';
+import { JournalEntry } from '@/context/JournalProvider';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
@@ -9,13 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SectionData {
   title: string;
-  data: PlantEntry[];
+  data: JournalEntry[];
 }
 
 interface HistoryListProps {
   sectionedEntries: SectionData[];
   swipedEntryId: string | null;
-  onEntryPress: (entry: PlantEntry) => void;
+  onEntryPress: (entry: JournalEntry) => void;
   onEntryDelete: (entryId: string) => Promise<void>;
   onSwipeOpen: (entryId: string | null) => void;
   onOutsideInteraction: () => void;
