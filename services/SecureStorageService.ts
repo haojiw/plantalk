@@ -1,5 +1,5 @@
 import CryptoJS from 'crypto-js';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as SecureStore from 'expo-secure-store';
 
 interface SecureStorageOptions {

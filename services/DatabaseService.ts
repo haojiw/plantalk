@@ -1,5 +1,5 @@
 import { JournalEntry, JournalState } from '@/context/JournalProvider';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import { secureStorageService } from './SecureStorageService';
 
@@ -29,15 +29,12 @@ class DatabaseService {
     try {
       console.log('[DatabaseService] Initializing database...');
       
-      // Create secure database directory
-      const dbDir = `${FileSystem.documentDirectory}secure/`;
-      await secureStorageService.createSecureDirectory(dbDir);
+      // Create secure database directory - for now, store in document directory
+      // Note: The database will be created in the default location
+      console.log('[DatabaseService] Database will be created in default location');
       
       // Open database connection
-      this.db = await SQLite.openDatabaseAsync(DatabaseService.DB_NAME, {
-        directory: dbDir,
-        useNewConnection: true
-      });
+      this.db = await SQLite.openDatabaseAsync(DatabaseService.DB_NAME);
 
       // Enable foreign keys and WAL mode for better performance and consistency
       await this.db.execAsync(`

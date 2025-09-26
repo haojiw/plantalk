@@ -136,9 +136,8 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
       console.log('[SecureJournalProvider] Checking for legacy data to migrate...');
       
       // Try to import from old storage locations
-      const { FileSystem } = await import('expo-file-system');
+      const FileSystem = await import('expo-file-system/legacy');
       const oldEntriesPath = `${FileSystem.documentDirectory}entries.json`;
-      const oldAudioDir = `${FileSystem.documentDirectory}audio/`;
 
       // Check if old data exists
       const oldDataExists = await FileSystem.getInfoAsync(oldEntriesPath);
@@ -198,10 +197,6 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
           
           // Mark migration as completed
           await secureStorageService.setSecureItem('migration_completed', 'true');
-          
-          // Optionally remove old data (commented out for safety)
-          // await FileSystem.deleteAsync(oldEntriesPath);
-          // console.log('[SecurePlantProvider] Removed old data files');
           
         } catch (migrationError) {
           console.error('[SecureJournalProvider] Migration failed:', migrationError);
