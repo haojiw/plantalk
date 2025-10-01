@@ -21,11 +21,6 @@ The system is structured into four main layers: **View/UI**, **State/Context**, 
 ---
 
 ### 2. Core Architecture Layers
-I will rewrite the "Core Architecture Layers" section to follow the UI $\rightarrow$ Hooks $\rightarrow$ Context $\rightarrow$ Services $\rightarrow$ Storage flow, ensuring clarity and citing the provided information.
-
----
-
-### 2. Core Architecture Layers (The Flow)
 
 The application architecture is a simple pipeline that follows clear layers: 
 
