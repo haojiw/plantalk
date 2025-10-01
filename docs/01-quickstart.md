@@ -1,4 +1,4 @@
-## Plantalk Developer Quickstart
+# Developer Quickstart
 
 This guide gets your local environment set up, verifies core functionality, and covers common issues.
 
@@ -107,4 +107,3 @@ Plantalk uses the Gemini API for transcription and text refinement.
   * **Architecture**: Read the next document (e.g., `02-architecture.md`) to understand how services, providers, and UI pieces connect.
   * **Feature Flows**: Consult the feature-specific guides (e.g., `03-feature-flows/`).
   * **Release Builds**: See the guide on EAS if you need to create a test build.
-  

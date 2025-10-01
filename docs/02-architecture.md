@@ -1,8 +1,6 @@
-## Architecture
+# Architecture
 
-Plantalk is built as a highly responsive, mobile-first, voice-centric application. The architecture prioritizes speed, data privacy, and a seamless developer experience using a modern React Native ecosystem.
-
-The system is structured into four main layers: **View/UI**, **State/Context**, **Services/Logic**, and **Data Storage**.
+This guide outlines the app's architecture, which is structured for speed, data privacy, and a seamless developer experience.
 
 ---
 

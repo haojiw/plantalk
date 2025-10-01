@@ -1,4 +1,5 @@
-## Plantalk: The Voice Journal
+# Plantalk: The Voice Journal
+
 
 **Plantalk** is a voice-first journal designed to make **reflection a simple, consistent habit**.
 
