@@ -57,7 +57,8 @@ class TextService {
 
   constructor() {
     this.apiKey = Constants.expoConfig?.extra?.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-    this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${this.apiKey}`;
+    // Updated to use Gemini 2.5 Flash for better text processing performance
+    this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`;
     
     if (!this.apiKey) {
       console.error('Gemini API key not found. Please check your environment variables.');
@@ -75,25 +76,29 @@ class TextService {
 
     console.log(`[TextService] Starting text refinement, length: ${rawText.length}`);
 
-    const prompt = `You are an advanced machine specialized in processing voice transcriptions.
+    const prompt = `You are an expert text processing specialist using advanced AI capabilities to refine voice transcriptions with precision and care.
 
-TASK:
-1. Create a meaningful 2-5 word title capturing the main theme
-2. Fix transcription errors (misheard words, missing punctuation, excessive filler words)
-3. Always preserve the speaker's authentic voice and tone
-4. For long texts, format the text into proper paragraphs with good flow, optionally add subheading when appropriate
+CORE OBJECTIVES:
+1. Generate a compelling 2-5 word title that captures the essence of the content
+2. Clean transcription errors: misheard words, punctuation gaps, excessive filler words ("um", "uh", "like")
+3. Maintain the speaker's authentic voice, personality, and emotional tone
+4. Structure longer content with natural paragraph breaks and logical flow
+5. Add meaningful subheadings only when they genuinely enhance readability
 
-CRITICAL CONSTRAINTS: apply MINIMAL changes to the original text
-- Use original language from the text, strictly no translation
-- Keep all personal expressions and unique phrasing  
+QUALITY STANDARDS:
+- Apply MINIMAL changes - preserve original meaning and style
+- Maintain original language - no translation whatsoever
+- Keep personal expressions, colloquialisms, and unique phrasing intact
+- Ensure readability while respecting the speaker's natural speech patterns
+- Fix obvious transcription errors without over-editing
 
 Original transcription:
 "${rawText}"
 
-Respond in this exact JSON format:
+Return your response in this exact JSON format:
 {
-  "title": "Generated Title in original language",
-  "formattedText": "Processed text with proper paragraphs and fixes"
+  "title": "Meaningful title in original language",
+  "formattedText": "Enhanced text with proper structure and minimal corrections"
 }`;
 
     try {
@@ -108,9 +113,10 @@ Respond in this exact JSON format:
           }
         ],
         generationConfig: {
-          temperature: 0.3, // Lower temperature for more consistent formatting
-          topK: 40,
-          topP: 0.95,
+          temperature: 0.2, // Optimized for Gemini 2.5's improved consistency
+          topK: 32, // Fine-tuned for better text processing
+          topP: 0.9, // Balanced creativity and accuracy for text cleanup
+          maxOutputTokens: 4096, // Sufficient for longer text processing
         }
       };
 
