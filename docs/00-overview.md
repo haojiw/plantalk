@@ -30,9 +30,9 @@ Beyond the core recording function, Plantalk is built to help you organize your 
 | :--- | :--- | :--- |
 | **Habit Building** | Encourage consistent reflection. | Gentle reminders, non-shaming streaks, and "tiny wins" that reinforce the habit. |
 | **Organization** | Make past thoughts easy to find. | Tags, smart search, and simple structure for finding ideas, notes, decisions, etc. |
-| **AI as a Mirror** | Surface patterns in your thinking. | Once you have enough entries, the AI will provide **Insights** on: themes, moods, triggers, relationship patterns, and progress toward goals. |
+| **AI as a Mirror** | Surface patterns in your thinking. | Once you have enough entries, the AI will provide **Insights** on: your personality, core themes, experiences, identity and goals. |
 
-*The AI's purpose is to **reflect** you—clearly and kindly—not to judge you.*
+*The AI's purpose is to **reflect** you like a mirror. Not to judge you like a coach or comfort you like a companion. It is YOU. Your strength comes from within*
 
 ---
 
@@ -41,14 +41,14 @@ Beyond the core recording function, Plantalk is built to help you organize your 
 * **Verbal Thinkers**: You process ideas best when speaking them aloud.
 * **Builders & Creatives**: You need to capture ideas the moment they strike.
 * **Habit Builders**: You want a simple reflection practice without the pressure of "perfect" writing.
-* **The Growth-Oriented**: You value gentle guidance and self-understanding over rigid "grind culture."
+* **The Growth-Oriented**: You value purpose and self-understanding over rigid "grind culture."
 
 ### What Success Looks Like
 
 * You **record regularly** with low friction.
 * You can **find past thoughts quickly**.
 * You feel **seen and understood** by the AI insights.
-* You notice **steadier moods and clearer goals** over time.
+* You notice **clearer purpose & identity** over time.
 
 ---
 

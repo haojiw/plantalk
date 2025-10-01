@@ -55,8 +55,8 @@ export default function EntryScreen() {
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Good morning</Text>
-          <Text style={styles.streakText}>Start your journey</Text>
+          <Text style={styles.greeting}>Good morning Haoji</Text>
+          <Text style={styles.streakText}>Start your journey today</Text>
         </View>
 
         {/* Plant Display */}
