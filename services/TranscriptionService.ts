@@ -1,3 +1,4 @@
+import { getTotalDiskCapacityAsync } from 'expo-file-system/legacy';
 import { speechService } from './SpeechService';
 import { textService } from './TextService';
 
@@ -19,6 +20,8 @@ interface TranscriptionResult {
 class TranscriptionService {
   private queue: TranscriptionTask[] = [];
   private isProcessing = false;
+
+  // im just very excited about this new monitor i got
 
   // Add a transcription task to the queue
   addToQueue(task: TranscriptionTask) {

@@ -76,3 +76,6 @@ Beyond the core recording function, Plantalk is built to help you organize your 
 * A social network (No feeds, no likes).
 * A replacement for professional mental health care.
 * A tool to optimize every part of your life (We focus on understanding first).
+
+
+success criteria, included & excluded

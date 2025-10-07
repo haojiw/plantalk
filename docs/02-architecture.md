@@ -100,4 +100,7 @@ The architecture is built on a **local-first** and **secure-by-default** princip
   * **Encryption**: AES-256 encryption and device keychain protection are used for all sensitive data.
   * **Self-Healing**: The `DataValidationService` provides automatic recovery from data corruption, ensuring data is durable and available.
   * **API Usage**: Audio data is sent to the Gemini API only for the necessary processing steps, minimizing its time outside the secure local environment.
+
+  alternatives
+  choice of architecture
   
