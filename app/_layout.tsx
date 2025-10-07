@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { JournalProvider } from '@/context/JournalProvider';
+import { SecureJournalProvider } from '@/context/SecureJournalProvider';
 import {
     DMSans_400Regular,
     DMSans_700Bold,
@@ -80,7 +80,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <JournalProvider>
+        <SecureJournalProvider>
           <Stack screenOptions={{ 
             headerShown: false,
             animation: 'fade',
@@ -115,7 +115,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="+not-found" />
           </Stack>
-        </JournalProvider>
+        </SecureJournalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

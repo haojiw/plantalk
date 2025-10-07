@@ -1,4 +1,4 @@
-import { JournalEntry } from '@/context/JournalProvider';
+import { JournalEntry } from '@/types/journal';
 import { transcriptionService } from '@/services/TranscriptionService';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -41,7 +41,7 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'OK',
-          onPress: (timeString) => {
+          onPress: (timeString?: string) => {
             if (timeString) {
               const timeRegex = /^\d{2}:\d{2}$/;
               if (timeRegex.test(timeString)) {
@@ -77,7 +77,7 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'OK',
-          onPress: (dateString) => {
+          onPress: (dateString?: string) => {
             if (dateString) {
               const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
               if (dateRegex.test(dateString)) {
@@ -325,4 +325,4 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
     showOptions,
     showRawTranscription,
   };
-}; 
+};

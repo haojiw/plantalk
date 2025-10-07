@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { JournalEntry } from '@/context/JournalProvider';
+import { JournalEntry } from '@/types/journal';
 import { theme } from '@/styles/theme';
 
 const { width: screenWidth } = Dimensions.get('window');

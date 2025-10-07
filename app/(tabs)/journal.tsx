@@ -14,8 +14,9 @@ import Animated, {
 
 import { HistoryList } from '@/components/HistoryList';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { JournalEntry, useJournal } from '@/context/JournalProvider';
+import { useSecureJournal } from '@/context/SecureJournalProvider';
 import { theme } from '@/styles/theme';
+import { JournalEntry } from '@/types/journal';
 
 interface SectionData {
   title: string;
@@ -23,7 +24,7 @@ interface SectionData {
 }
 
 export default function JournalScreen() {
-  const { state, deleteEntry, addEntry } = useJournal();
+  const { state, deleteEntry, addEntry } = useSecureJournal();
   const [swipedEntryId, setSwipedEntryId] = useState<string | null>(null);
   const opacity = useSharedValue(0);
 

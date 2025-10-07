@@ -1,4 +1,4 @@
-import { useJournal } from '@/context/JournalProvider';
+import { useSecureJournal } from '@/context/SecureJournalProvider';
 import {
   AudioModule,
   RecordingPresets,
@@ -31,7 +31,7 @@ export const useRecorder = (): UseRecorderReturn => {
   const [hasPermission, setHasPermission] = useState(false);
   
   const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { addEntry } = useJournal();
+  const { addEntry } = useSecureJournal();
 
   // Create audio recorder using expo-audio with high quality preset
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);

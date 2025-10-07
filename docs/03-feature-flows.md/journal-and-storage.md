@@ -47,7 +47,7 @@ Scope: CRUD entries, sectioned lists, item swipe/delete, local storage/backup.
 
 ```ts
 // context/JournalProvider.tsx
-export function useJournal() {
+export function useSecureJournal() {
   return {
     entries,               // memoized list (excluding soft‑deleted)
     getEntryById(id),      // selector

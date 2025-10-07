@@ -9,7 +9,7 @@ import { AudioPlayer } from '@/components/AudioPlayer';
 import { EntryContent } from '@/components/EntryContent';
 import { EntryDetailHeader } from '@/components/EntryDetailHeader';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { useJournal } from '@/context/JournalProvider';
+import { useSecureJournal } from '@/context/SecureJournalProvider';
 import { useDateRevealAnimation } from '@/hooks/useDateRevealAnimation';
 import { useEntryEditor } from '@/hooks/useEntryEditor';
 import { useEntryOptions } from '@/hooks/useEntryOptions';
@@ -19,7 +19,7 @@ import { theme } from '@/styles/theme';
 export default function EntryDetailScreen() {
   // 1. Get entry and context functions
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, updateEntry, updateEntryProgress, updateEntryTranscription } = useJournal();
+  const { state, updateEntry, updateEntryProgress, updateEntryTranscription } = useSecureJournal();
   const entry = state.entries.find(e => e.id === id);
 
   // 2. Initialize all hooks

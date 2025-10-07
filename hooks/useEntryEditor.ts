@@ -1,4 +1,4 @@
-import { JournalEntry } from '@/context/JournalProvider';
+import { JournalEntry } from '@/types/journal';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 

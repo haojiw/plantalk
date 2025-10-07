@@ -6,7 +6,7 @@ import { transcriptionService } from '@/services/TranscriptionService';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import { JournalEntry, JournalState } from './JournalProvider';
+import { JournalEntry, JournalState } from '@/types/journal';
 
 interface SecureJournalContextType {
   state: JournalState;

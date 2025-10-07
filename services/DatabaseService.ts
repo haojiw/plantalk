@@ -1,4 +1,5 @@
-import { JournalEntry, JournalState } from '@/context/JournalProvider';
+import { JournalEntry, JournalState } from '@/types/journal';
+
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
 import { secureStorageService } from './SecureStorageService';
