@@ -2,19 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import Animated, {
-  FadeIn,
-  FadeOut,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    FadeIn,
+    FadeOut,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 
+import { AudioPathMigration } from '@/components/AudioPathMigration';
 import { ScreenWrapper } from '@/components/ScreenWrapper';
 import { theme } from '@/styles/theme';
 
@@ -165,6 +166,12 @@ export default function InsightsScreen() {
           )}
         </View>
 
+        {/* Developer Tools Section */}
+        <View style={styles.developerSection}>
+          <Text style={styles.developerSectionTitle}>Developer Tools</Text>
+          <AudioPathMigration />
+        </View>
+
         <View style={styles.bottomSpacing} />
       </Animated.ScrollView>
     </ScreenWrapper>
@@ -266,6 +273,19 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: theme.spacing.sm,
+  },
+  developerSection: {
+    paddingHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.xxl,
+  },
+  developerSectionTitle: {
+    ...theme.typography.subheading,
+    color: theme.colors.text + '60',
+    fontWeight: '600',
+    marginBottom: theme.spacing.md,
+    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   bottomSpacing: {
     height: theme.spacing.lg,

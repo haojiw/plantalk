@@ -1,5 +1,6 @@
-import { JournalEntry } from '@/types/journal';
 import { transcriptionService } from '@/services/TranscriptionService';
+import { JournalEntry } from '@/types/journal';
+import { getAbsoluteAudioPath } from '@/utils/audioPath';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
@@ -225,8 +226,15 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
     }
 
     try {
+      // Convert to absolute path
+      const absolutePath = getAbsoluteAudioPath(entry.audioUri);
+      if (!absolutePath) {
+        Alert.alert('Error', 'Invalid audio file path');
+        return;
+      }
+
       // Check if the file exists
-      const fileInfo = await FileSystem.getInfoAsync(entry.audioUri);
+      const fileInfo = await FileSystem.getInfoAsync(absolutePath);
       if (!fileInfo.exists) {
         Alert.alert('Error', 'Audio file not found');
         return;
@@ -248,7 +256,7 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
       // Copy to a temporary location with the desired filename
       const tempUri = `${FileSystem.documentDirectory}${fileName}`;
       await FileSystem.copyAsync({
-        from: entry.audioUri,
+        from: absolutePath,
         to: tempUri
       });
 

@@ -1,4 +1,5 @@
 import { JournalEntry, JournalState } from '@/types/journal';
+import { getAbsoluteAudioPath } from '@/utils/audioPath';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';
@@ -233,9 +234,12 @@ class DatabaseService {
       // Delete audio file if exists
       if (entry?.audioUri) {
         try {
-          const fileInfo = await FileSystem.getInfoAsync(entry.audioUri);
-          if (fileInfo.exists) {
-            await secureStorageService.secureDeleteFile(entry.audioUri);
+          const absolutePath = getAbsoluteAudioPath(entry.audioUri);
+          if (absolutePath) {
+            const fileInfo = await FileSystem.getInfoAsync(absolutePath);
+            if (fileInfo.exists) {
+              await secureStorageService.secureDeleteFile(absolutePath);
+            }
           }
         } catch (audioError) {
           console.error('[DatabaseService] Failed to delete audio file:', audioError);

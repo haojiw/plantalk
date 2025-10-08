@@ -3,10 +3,11 @@ import { databaseService } from '@/services/DatabaseService';
 import { dataValidationService } from '@/services/DataValidationService';
 import { secureStorageService } from '@/services/SecureStorageService';
 import { transcriptionService } from '@/services/TranscriptionService';
+import { JournalEntry, JournalState } from '@/types/journal';
+import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath } from '@/utils/audioPath';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import { JournalEntry, JournalState } from '@/types/journal';
 
 interface SecureJournalContextType {
   state: JournalState;
@@ -29,9 +30,6 @@ interface SecureJournalContextType {
 
 const SecureJournalContext = createContext<SecureJournalContextType | undefined>(undefined);
 
-// Audio directory path for permanent storage
-const AUDIO_DIR_PATH = `${FileSystem.documentDirectory}audio/`;
-
 interface SecureJournalProviderProps {
   children: ReactNode;
 }
@@ -44,9 +42,10 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
   // Ensure audio directory exists
   const ensureAudioDirectoryExists = async () => {
     try {
-      const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIR_PATH);
+      const audioDir = getAudioDirectory();
+      const dirInfo = await FileSystem.getInfoAsync(audioDir);
       if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(AUDIO_DIR_PATH, { intermediates: true });
+        await FileSystem.makeDirectoryAsync(audioDir, { intermediates: true });
       }
     } catch (error) {
       console.error('[SecureJournalProvider] Error creating audio directory:', error);
@@ -54,37 +53,57 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
   };
 
   // Move audio file from temporary cache to permanent storage
+  // Returns RELATIVE path (e.g., "audio/audio_123.m4a") to survive app updates
   const moveAudioToPermanentStorage = async (tempAudioUri: string): Promise<string> => {
     try {
       await ensureAudioDirectoryExists();
       const filename = `audio_${Date.now()}.m4a`;
-      const permanentUri = `${AUDIO_DIR_PATH}${filename}`;
+      const relativePath = `audio/${filename}`;
+      const absolutePath = getAbsoluteAudioPath(relativePath)!;
+      
       await FileSystem.moveAsync({
         from: tempAudioUri,
-        to: permanentUri,
+        to: absolutePath,
       });
-      console.log(`[SecureJournalProvider] Moved audio file from ${tempAudioUri} to ${permanentUri}`);
-      return permanentUri;
+      
+      console.log(`[SecureJournalProvider] Moved audio file from ${tempAudioUri} to ${absolutePath}`);
+      console.log(`[SecureJournalProvider] Storing relative path: ${relativePath}`);
+      
+      return relativePath; // Return relative path for database storage
     } catch (error) {
       console.error('[SecureJournalProvider] Error moving audio file:', error);
-      return tempAudioUri; // Return original URI if move fails
+      // Return relative path of temp URI if move fails
+      return getRelativeAudioPath(tempAudioUri) || tempAudioUri;
     }
   };
 
   // Cleanup orphaned audio files
   const cleanupOrphanedAudio = async (currentEntries: JournalEntry[]) => {
     try {
-      const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIR_PATH);
+      const audioDir = getAudioDirectory();
+      const dirInfo = await FileSystem.getInfoAsync(audioDir);
       if (!dirInfo.exists) return; // No directory, no orphans
 
-      const audioFiles = await FileSystem.readDirectoryAsync(AUDIO_DIR_PATH);
-      const validAudioUris = new Set(currentEntries.map(e => e.audioUri).filter(Boolean));
+      const audioFiles = await FileSystem.readDirectoryAsync(audioDir);
+      
+      // Create set of valid relative filenames (e.g., "audio_123.m4a")
+      const validFilenames = new Set(
+        currentEntries
+          .map(e => e.audioUri)
+          .filter(Boolean)
+          .map(uri => {
+            // Extract just the filename from the relative path
+            // e.g., "audio/audio_123.m4a" -> "audio_123.m4a"
+            const parts = uri!.split('/');
+            return parts[parts.length - 1];
+          })
+      );
 
       for (const filename of audioFiles) {
-        const fileUri = `${AUDIO_DIR_PATH}${filename}`;
-        if (!validAudioUris.has(fileUri)) {
+        if (!validFilenames.has(filename)) {
           console.log(`[SecureJournalProvider] Deleting orphaned audio file: ${filename}`);
           try {
+            const fileUri = `${audioDir}${filename}`;
             await FileSystem.deleteAsync(fileUri);
           } catch (deleteError) {
             console.error(`[SecureJournalProvider] Failed to delete ${filename}:`, deleteError);
@@ -393,10 +412,13 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
       // Delete audio file if it exists
       if (entryToDelete?.audioUri) {
         try {
-          const fileInfo = await FileSystem.getInfoAsync(entryToDelete.audioUri);
-          if (fileInfo.exists) {
-            await FileSystem.deleteAsync(entryToDelete.audioUri);
-            console.log(`[SecureJournalProvider] Deleted audio file: ${entryToDelete.audioUri}`);
+          const absolutePath = getAbsoluteAudioPath(entryToDelete.audioUri);
+          if (absolutePath) {
+            const fileInfo = await FileSystem.getInfoAsync(absolutePath);
+            if (fileInfo.exists) {
+              await FileSystem.deleteAsync(absolutePath);
+              console.log(`[SecureJournalProvider] Deleted audio file: ${absolutePath}`);
+            }
           }
         } catch (audioError) {
           console.error('[SecureJournalProvider] Error deleting audio file:', audioError);

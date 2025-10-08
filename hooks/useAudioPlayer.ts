@@ -1,3 +1,4 @@
+import { getAbsoluteAudioPath } from '@/utils/audioPath';
 import { setAudioModeAsync, useAudioPlayerStatus, useAudioPlayer as useExpoAudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
@@ -26,8 +27,11 @@ export const useAudioPlayer = ({ audioUri, duration }: UseAudioPlayerProps): Use
   const [wasPlayingBeforeDrag, setWasPlayingBeforeDrag] = useState(false);
   const progressPosition = useSharedValue(0);
 
+  // Convert relative path to absolute path for playback
+  const absoluteAudioUri = getAbsoluteAudioPath(audioUri);
+
   // Create audio player using expo-audio
-  const player = useExpoAudioPlayer(audioUri ? { uri: audioUri } : null);
+  const player = useExpoAudioPlayer(absoluteAudioUri ? { uri: absoluteAudioUri } : null);
   const status = useAudioPlayerStatus(player);
 
   // Configure audio session for speaker output
