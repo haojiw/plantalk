@@ -147,24 +147,27 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
       await ensureAudioDirectoryExists();
 
       // Perform initial health check and recovery if needed
-      const recovery = await dataValidationService.attemptRecovery();
-      if (!recovery.success) {
-        console.warn('[SecureJournalProvider] Recovery issues detected:', recovery.message);
-        
-        // Show alert for critical issues
-        if (recovery.message.includes('Critical') || recovery.message.includes('Manual intervention')) {
+      const ENABLE_AUTO_RECOVERY = false; // Set to false
+      if (ENABLE_AUTO_RECOVERY) {
+        const recovery = await dataValidationService.attemptRecovery();
+        if (!recovery.success) {
+          console.warn('[SecureJournalProvider] Recovery issues detected:', recovery.message);
+          
+          // Show alert for critical issues
+          if (recovery.message.includes('Critical') || recovery.message.includes('Manual intervention')) {
+            Alert.alert(
+              'Data Recovery Issue',
+              recovery.message + '\n\nThe app will continue to work, but some data may be missing.',
+              [{ text: 'OK' }]
+            );
+          }
+        } else if (recovery.backupRestored) {
           Alert.alert(
-            'Data Recovery Issue',
-            recovery.message + '\n\nThe app will continue to work, but some data may be missing.',
+            'Data Restored',
+            'Your data has been restored from a backup due to corruption.',
             [{ text: 'OK' }]
           );
         }
-      } else if (recovery.backupRestored) {
-        Alert.alert(
-          'Data Restored',
-          'Your data has been restored from a backup due to corruption.',
-          [{ text: 'OK' }]
-        );
       }
 
       // Load current state

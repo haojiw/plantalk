@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SecureStore from 'expo-secure-store';
 
@@ -18,7 +19,8 @@ class SecureStorageService {
       
       if (!encryptionKey) {
         // Generate a new encryption key if one doesn't exist
-        encryptionKey = CryptoJS.lib.WordArray.random(256/8).toString();
+        const randomBytes = await Crypto.getRandomBytesAsync(32); // 256 bits = 32 bytes
+        encryptionKey = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
         await SecureStore.setItemAsync(SecureStorageService.ENCRYPTION_KEY, encryptionKey);
         console.log('[SecureStorage] Generated new encryption key');
       } else {
@@ -38,8 +40,23 @@ class SecureStorageService {
         throw new Error('Encryption key not found');
       }
       
-      const encrypted = CryptoJS.AES.encrypt(data, encryptionKey).toString();
-      return encrypted;
+      // Generate IV using expo-crypto (16 bytes for AES)
+      const ivBytes = await Crypto.getRandomBytesAsync(16);
+      const iv = CryptoJS.lib.WordArray.create(ivBytes);
+      
+      // Use the encryption key as a WordArray
+      const key = CryptoJS.enc.Hex.parse(encryptionKey);
+      
+      // Encrypt with explicit IV
+      const encrypted = CryptoJS.AES.encrypt(data, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+      
+      // Return IV + ciphertext (we need IV for decryption)
+      const ivHex = Array.from(ivBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+      return ivHex + ':' + encrypted.toString();
     } catch (error) {
       console.error('[SecureStorage] Encryption failed:', error);
       throw error;
@@ -54,7 +71,30 @@ class SecureStorageService {
         throw new Error('Encryption key not found');
       }
       
-      const decrypted = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
+      // Split IV and ciphertext
+      const parts = encryptedData.split(':');
+      if (parts.length !== 2) {
+        // Handle old format (without explicit IV) for backward compatibility
+        const decrypted = CryptoJS.AES.decrypt(encryptedData, encryptionKey);
+        return decrypted.toString(CryptoJS.enc.Utf8);
+      }
+      
+      const ivHex = parts[0];
+      const ciphertext = parts[1];
+      
+      // Convert IV from hex to WordArray
+      const iv = CryptoJS.enc.Hex.parse(ivHex);
+      
+      // Use the encryption key as a WordArray
+      const key = CryptoJS.enc.Hex.parse(encryptionKey);
+      
+      // Decrypt with explicit IV
+      const decrypted = CryptoJS.AES.decrypt(ciphertext, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+      });
+      
       return decrypted.toString(CryptoJS.enc.Utf8);
     } catch (error) {
       console.error('[SecureStorage] Decryption failed:', error);
@@ -165,7 +205,8 @@ class SecureStorageService {
       }
 
       // Overwrite with random data before deletion for security
-      const randomData = CryptoJS.lib.WordArray.random(1024).toString();
+      const randomBytes = await Crypto.getRandomBytesAsync(1024);
+      const randomData = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
       await FileSystem.writeAsStringAsync(filePath, randomData);
       
       // Delete the file
