@@ -1,3 +1,4 @@
+import { getAbsoluteAudioPath } from '@/utils/audioPath';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -72,12 +73,20 @@ class SpeechService {
     try {
       console.log(`[SpeechService] Starting transcription for URI: ${audioUri}`);
       
+      // Convert relative path to absolute path if needed
+      const absoluteAudioUri = getAbsoluteAudioPath(audioUri);
+      if (!absoluteAudioUri) {
+        throw new Error('Invalid audio URI');
+      }
+      
+      console.log(`[SpeechService] Using absolute path: ${absoluteAudioUri}`);
+      
       // First, get file info to understand what we're working with
-      const fileInfo = await FileSystem.getInfoAsync(audioUri);
+      const fileInfo = await FileSystem.getInfoAsync(absoluteAudioUri);
       console.log(`[SpeechService] File info:`, {
         exists: fileInfo.exists,
         size: fileInfo.exists ? (fileInfo as any).size : 0,
-        uri: audioUri
+        uri: absoluteAudioUri
       });
 
       if (!fileInfo.exists) {
@@ -91,25 +100,25 @@ class SpeechService {
       }
 
       // Read the audio file as base64
-      const audioBase64 = await FileSystem.readAsStringAsync(audioUri, {
+      const audioBase64 = await FileSystem.readAsStringAsync(absoluteAudioUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
       // Determine MIME type based on file extension
       let mimeType = 'audio/mp3'; // default
-      if (audioUri.includes('.m4a')) {
+      if (absoluteAudioUri.includes('.m4a')) {
         mimeType = 'audio/aac';
-      } else if (audioUri.includes('.mp4')) {
+      } else if (absoluteAudioUri.includes('.mp4')) {
         mimeType = 'audio/mp4';
-      } else if (audioUri.includes('.wav')) {
+      } else if (absoluteAudioUri.includes('.wav')) {
         mimeType = 'audio/wav';
-      } else if (audioUri.includes('.mp3')) {
+      } else if (absoluteAudioUri.includes('.mp3')) {
         mimeType = 'audio/mp3';
-      } else if (audioUri.includes('.ogg')) {
+      } else if (absoluteAudioUri.includes('.ogg')) {
         mimeType = 'audio/ogg';
-      } else if (audioUri.includes('.flac')) {
+      } else if (absoluteAudioUri.includes('.flac')) {
         mimeType = 'audio/flac';
-      } else if (audioUri.includes('.aiff')) {
+      } else if (absoluteAudioUri.includes('.aiff')) {
         mimeType = 'audio/aiff';
       }
 

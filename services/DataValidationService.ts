@@ -51,7 +51,12 @@ class DataValidationService {
         warnings.push('Entry title is unusually long');
       }
 
-      if (!entry.text || typeof entry.text !== 'string') {
+      // Allow empty text if entry is still being processed
+      const isProcessing = entry.processingStage === 'transcribing' || entry.processingStage === 'refining';
+      
+      if (typeof entry.text !== 'string') {
+        errors.push('Entry text is invalid (must be a string)');
+      } else if (!entry.text && !isProcessing) {
         errors.push('Entry text is missing or invalid');
       } else if (entry.text.length > 50000) {
         warnings.push('Entry text is unusually long');
@@ -215,8 +220,11 @@ class DataValidationService {
         fixedEntry.title = `Recovered Entry - ${entryDate.toLocaleDateString()}`;
       }
 
-      // Fix missing text
-      if (!fixedEntry.text || typeof fixedEntry.text !== 'string') {
+      // Fix missing text (but allow empty if processing)
+      const isProcessing = fixedEntry.processingStage === 'transcribing' || fixedEntry.processingStage === 'refining';
+      if (typeof fixedEntry.text !== 'string') {
+        fixedEntry.text = isProcessing ? 'Processing...' : 'This entry was recovered from corrupted data.';
+      } else if (!fixedEntry.text && !isProcessing) {
         fixedEntry.text = 'This entry was recovered from corrupted data.';
       }
 

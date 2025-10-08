@@ -4,7 +4,7 @@ import { dataValidationService } from '@/services/DataValidationService';
 import { secureStorageService } from '@/services/SecureStorageService';
 import { transcriptionService } from '@/services/TranscriptionService';
 import { JournalEntry, JournalState } from '@/types/journal';
-import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath } from '@/utils/audioPath';
+import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath, isRelativePath } from '@/utils/audioPath';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
@@ -26,6 +26,19 @@ interface SecureJournalContextType {
   restoreFromBackup: (backupPath: string) => Promise<void>;
   getBackupList: () => Promise<any[]>;
   forceSync: () => Promise<void>;
+  emergencyRecovery: () => Promise<{ success: boolean; message: string; entriesRecovered: number }>;
+  runStorageDiagnostics: () => Promise<{
+    success: boolean;
+    results: {
+      database: { status: string; details: string };
+      secureStorage: { status: string; details: string };
+      entries: { status: string; details: string };
+      audioFiles: { status: string; details: string };
+      backupSystem: { status: string; details: string };
+      migration: { status: string; details: string };
+    };
+    summary: string;
+  }>;
 }
 
 const SecureJournalContext = createContext<SecureJournalContextType | undefined>(undefined);
@@ -571,6 +584,303 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     }
   };
 
+  // Run comprehensive storage diagnostics
+  const runStorageDiagnostics = async () => {
+    const results = {
+      database: { status: '', details: '' },
+      secureStorage: { status: '', details: '' },
+      entries: { status: '', details: '' },
+      audioFiles: { status: '', details: '' },
+      backupSystem: { status: '', details: '' },
+      migration: { status: '', details: '' },
+    };
+
+    try {
+      // 1. Database Connection Test
+      console.log('[Diagnostics] Testing database connection...');
+      try {
+        const appState = await databaseService.getAppState();
+        results.database.status = '✅ Pass';
+        results.database.details = `Connected. ${appState.entries.length} entries found, streak: ${appState.streak}`;
+      } catch (error) {
+        results.database.status = '❌ Fail';
+        results.database.details = `Cannot read database: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // 2. Secure Storage Test
+      console.log('[Diagnostics] Testing secure storage...');
+      try {
+        const isAvailable = await secureStorageService.isAvailable();
+        if (isAvailable) {
+          // Test write
+          const testKey = 'diagnostic_test_key';
+          const testValue = `test_${Date.now()}`;
+          await secureStorageService.setSecureItem(testKey, testValue);
+          
+          // Test read
+          const readValue = await secureStorageService.getSecureItem(testKey);
+          
+          // Cleanup
+          await secureStorageService.removeSecureItem(testKey);
+          
+          if (readValue === testValue) {
+            results.secureStorage.status = '✅ Pass';
+            results.secureStorage.details = 'Read/write operations successful';
+          } else {
+            results.secureStorage.status = '⚠️ Warning';
+            results.secureStorage.details = 'Read value does not match written value';
+          }
+        } else {
+          results.secureStorage.status = '❌ Fail';
+          results.secureStorage.details = 'Secure storage not available on this device';
+        }
+      } catch (error) {
+        results.secureStorage.status = '❌ Fail';
+        results.secureStorage.details = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // 3. Entries Validation Test
+      console.log('[Diagnostics] Validating entries...');
+      try {
+        const appState = await databaseService.getAppState();
+        const validationResult = await dataValidationService.validateAppState(appState);
+        
+        if (validationResult.isValid) {
+          results.entries.status = '✅ Pass';
+          results.entries.details = `All ${appState.entries.length} entries are valid`;
+        } else if (validationResult.fixable) {
+          results.entries.status = '⚠️ Warning';
+          results.entries.details = `Found fixable issues: ${validationResult.errors.join(', ')}`;
+        } else {
+          results.entries.status = '❌ Fail';
+          results.entries.details = `Critical issues: ${validationResult.errors.join(', ')}`;
+        }
+      } catch (error) {
+        results.entries.status = '❌ Fail';
+        results.entries.details = `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // 4. Audio Files Test
+      console.log('[Diagnostics] Checking audio files...');
+      try {
+        const appState = await databaseService.getAppState();
+        const entriesWithAudio = appState.entries.filter(e => e.audioUri);
+        
+        let existingFiles = 0;
+        let missingFiles = 0;
+        let relativePathCount = 0;
+        
+        for (const entry of entriesWithAudio) {
+          if (entry.audioUri) {
+            // Check if path is relative (correct format)
+            if (isRelativePath(entry.audioUri)) {
+              relativePathCount++;
+            }
+            
+            // Check if file exists
+            const absolutePath = getAbsoluteAudioPath(entry.audioUri);
+            if (absolutePath) {
+              const fileInfo = await FileSystem.getInfoAsync(absolutePath);
+              if (fileInfo.exists) {
+                existingFiles++;
+              } else {
+                missingFiles++;
+              }
+            } else {
+              missingFiles++;
+            }
+          }
+        }
+        
+        if (missingFiles === 0) {
+          results.audioFiles.status = '✅ Pass';
+          results.audioFiles.details = `${existingFiles}/${entriesWithAudio.length} audio files found (${relativePathCount} using relative paths)`;
+        } else if (existingFiles > 0) {
+          results.audioFiles.status = '⚠️ Warning';
+          results.audioFiles.details = `${existingFiles} files exist, ${missingFiles} missing`;
+        } else {
+          results.audioFiles.status = '❌ Fail';
+          results.audioFiles.details = `All ${missingFiles} audio files are missing`;
+        }
+      } catch (error) {
+        results.audioFiles.status = '❌ Fail';
+        results.audioFiles.details = `Error checking files: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // 5. Backup System Test
+      console.log('[Diagnostics] Testing backup system...');
+      try {
+        const backups = await backupService.getAvailableBackups();
+        results.backupSystem.status = '✅ Pass';
+        results.backupSystem.details = `Backup system operational. ${backups.length} backup(s) available`;
+      } catch (error) {
+        results.backupSystem.status = '⚠️ Warning';
+        results.backupSystem.details = `Cannot list backups: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // 6. Migration Status Test
+      console.log('[Diagnostics] Checking migration status...');
+      try {
+        const migrationCompleted = await secureStorageService.getSecureItem('migration_completed');
+        const oldEntriesPath = `${FileSystem.documentDirectory}entries.json`;
+        const oldDataExists = await FileSystem.getInfoAsync(oldEntriesPath);
+        
+        if (migrationCompleted === 'true') {
+          if (oldDataExists.exists) {
+            // Read old file to see how many entries
+            const oldContent = await FileSystem.readAsStringAsync(oldEntriesPath);
+            const oldState: JournalState = JSON.parse(oldContent);
+            results.migration.status = '⚠️ Warning';
+            results.migration.details = `Migration completed, but old file still exists with ${oldState.entries.length} entries`;
+          } else {
+            results.migration.status = '✅ Pass';
+            results.migration.details = 'Migration completed, old file removed';
+          }
+        } else {
+          if (oldDataExists.exists) {
+            results.migration.status = '❌ Fail';
+            results.migration.details = 'Migration not completed, old file exists';
+          } else {
+            results.migration.status = '✅ Pass';
+            results.migration.details = 'No migration needed (fresh install)';
+          }
+        }
+      } catch (error) {
+        results.migration.status = '⚠️ Warning';
+        results.migration.details = `Cannot check migration: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+
+      // Generate summary
+      const passCount = Object.values(results).filter(r => r.status.includes('✅')).length;
+      const warnCount = Object.values(results).filter(r => r.status.includes('⚠️')).length;
+      const failCount = Object.values(results).filter(r => r.status.includes('❌')).length;
+      
+      let summary = '';
+      if (failCount === 0 && warnCount === 0) {
+        summary = '🎉 All tests passed! Storage system is healthy.';
+      } else if (failCount === 0) {
+        summary = `⚠️ ${passCount} passed, ${warnCount} warnings. System is functional with minor issues.`;
+      } else {
+        summary = `❌ ${failCount} critical failures, ${warnCount} warnings, ${passCount} passed. Action required.`;
+      }
+
+      console.log('[Diagnostics] Complete:', summary);
+      
+      return {
+        success: failCount === 0,
+        results,
+        summary
+      };
+      
+    } catch (error) {
+      console.error('[Diagnostics] Fatal error:', error);
+      return {
+        success: false,
+        results,
+        summary: `Fatal error during diagnostics: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  };
+
+  // Emergency recovery: force re-migration from old entries.json
+  const emergencyRecovery = async (): Promise<{ success: boolean; message: string; entriesRecovered: number }> => {
+    try {
+      console.log('[SecureJournalProvider] Starting emergency recovery...');
+      
+      // Check if old entries.json exists
+      const oldEntriesPath = `${FileSystem.documentDirectory}entries.json`;
+      const oldDataExists = await FileSystem.getInfoAsync(oldEntriesPath);
+      
+      if (!oldDataExists.exists) {
+        return {
+          success: false,
+          message: 'No legacy data found at entries.json. Your data may have been lost during migration.',
+          entriesRecovered: 0
+        };
+      }
+      
+      // Read old entries
+      const oldDataContent = await FileSystem.readAsStringAsync(oldEntriesPath);
+      const oldState: JournalState = JSON.parse(oldDataContent);
+      
+      console.log(`[SecureJournalProvider] Found ${oldState.entries.length} entries in legacy storage`);
+      
+      if (oldState.entries.length === 0) {
+        return {
+          success: false,
+          message: 'Legacy file exists but contains 0 entries.',
+          entriesRecovered: 0
+        };
+      }
+      
+      // Validate and fix entries if needed
+      const validation = await dataValidationService.validateAppState(oldState);
+      let entriesToRecover = oldState.entries;
+      
+      if (!validation.isValid && validation.fixable) {
+        console.log('[SecureJournalProvider] Fixing corrupted entries during recovery...');
+        entriesToRecover = await Promise.all(
+          oldState.entries.map(async (entry) => {
+            const entryValidation = dataValidationService.validateEntry(entry);
+            if (!entryValidation.isValid && entryValidation.fixable) {
+              return await dataValidationService.fixEntry(entry);
+            }
+            return entry;
+          })
+        );
+      }
+      
+      // Get current state to check for duplicates
+      const currentState = await databaseService.getAppState();
+      const currentIds = new Set(currentState.entries.map(e => e.id));
+      
+      // Import entries that don't already exist
+      let recoveredCount = 0;
+      for (const entry of entriesToRecover) {
+        if (!currentIds.has(entry.id)) {
+          await databaseService.addEntry(entry);
+          recoveredCount++;
+        }
+      }
+      
+      // Update app state with the most recent data
+      const allEntries = [...currentState.entries, ...entriesToRecover.filter(e => !currentIds.has(e.id))];
+      const sortedEntries = allEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      if (sortedEntries.length > 0) {
+        await databaseService.updateAppState({
+          streak: oldState.streak || currentState.streak,
+          lastEntryISO: sortedEntries[0].date
+        });
+      }
+      
+      // Mark migration as completed
+      await secureStorageService.setSecureItem('migration_completed', 'true');
+      
+      // Create backup after recovery
+      await backupService.createCompleteBackup(false);
+      
+      // Reload state
+      await loadState();
+      
+      console.log(`[SecureJournalProvider] Emergency recovery completed: ${recoveredCount} entries recovered`);
+      
+      return {
+        success: true,
+        message: `Successfully recovered ${recoveredCount} entries from legacy storage.`,
+        entriesRecovered: recoveredCount
+      };
+      
+    } catch (error) {
+      console.error('[SecureJournalProvider] Emergency recovery failed:', error);
+      return {
+        success: false,
+        message: `Recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        entriesRecovered: 0
+      };
+    }
+  };
+
   const contextValue: SecureJournalContextType = {
     state,
     isLoading,
@@ -587,6 +897,8 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     restoreFromBackup,
     getBackupList,
     forceSync,
+    emergencyRecovery,
+    runStorageDiagnostics,
   };
 
   return (
