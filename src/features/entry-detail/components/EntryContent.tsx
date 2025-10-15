@@ -1,4 +1,4 @@
-import { JournalEntry } from '@/types/journal';
+import { JournalEntry } from '@/shared/types/journal';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';

@@ -1,10 +1,10 @@
-import { backupService } from '@/services/BackupService';
-import { databaseService } from '@/services/DatabaseService';
-import { dataValidationService } from '@/services/DataValidationService';
-import { secureStorageService } from '@/services/SecureStorageService';
-import { transcriptionService } from '@/services/TranscriptionService';
-import { JournalEntry, JournalState } from '@/types/journal';
-import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath, isRelativePath } from '@/utils/audioPath';
+import { backupService } from '@/core/services/storage/BackupService';
+import { databaseService } from '@/core/services/storage/DatabaseService';
+import { dataValidationService } from '@/core/services/storage/DataValidationService';
+import { secureStorageService } from '@/core/services/storage/SecureStorageService';
+import { transcriptionService } from '@/core/services/ai/TranscriptionService';
+import { JournalEntry, JournalState } from '@/shared/types/journal';
+import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath, isRelativePath } from '@/core/services/audio/audioPath';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';

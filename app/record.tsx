@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { Waveform } from '@/components/Waveform';
-import { useRecorder } from '@/hooks/useRecorder';
+import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
+import { Waveform } from '@/features/recording/components/Waveform';
+import { useRecorder } from '@/features/recording/hooks/useRecorder';
 import { theme } from '@/styles/theme';
 
 export default function RecordScreen() {

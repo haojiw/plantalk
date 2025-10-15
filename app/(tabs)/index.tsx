@@ -9,8 +9,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { useSecureJournal } from '@/context/SecureJournalProvider';
+import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
+import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
 import { theme } from '@/styles/theme';
 
 export default function EntryScreen() {
@@ -65,7 +65,7 @@ export default function EntryScreen() {
             <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
               <View style={styles.plantCard}>
                 <Image
-                  source={require('@/assets/images/bonsai.png')}
+                  source={require('@assets/images/bonsai.png')}
                   style={styles.plantImage}
                   contentFit="contain"
                 />

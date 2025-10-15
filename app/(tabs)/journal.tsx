@@ -12,11 +12,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { HistoryList } from '@/components/HistoryList';
-import { ScreenWrapper } from '@/components/ScreenWrapper';
-import { useSecureJournal } from '@/context/SecureJournalProvider';
+import { HistoryList } from '@/features/journal/components/HistoryList';
+import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
+import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
 import { theme } from '@/styles/theme';
-import { JournalEntry } from '@/types/journal';
+import { JournalEntry } from '@/shared/types/journal';
 
 interface SectionData {
   title: string;

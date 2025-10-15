@@ -1,4 +1,4 @@
-import { useSecureJournal } from '@/context/SecureJournalProvider';
+import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
 import {
   AudioModule,
   RecordingPresets,

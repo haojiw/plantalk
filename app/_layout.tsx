@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { SecureJournalProvider } from '@/context/SecureJournalProvider';
+import { SecureJournalProvider } from '@/core/providers/journal/SecureJournalProvider';
 import {
     DMSans_400Regular,
     DMSans_700Bold,
@@ -47,7 +47,7 @@ import {
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require('@assets/fonts/SpaceMono-Regular.ttf'),
     // DM Sans fonts
     DMSans_400Regular,
     DMSans_700Bold,
