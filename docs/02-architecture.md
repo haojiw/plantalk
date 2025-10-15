@@ -1,106 +1,286 @@
-# Architecture
+# 02 — Architecture (Refactored)
 
-This guide outlines the app's architecture, which is a simple pipeline that follows clear layers: **UI → Hooks → Context → Services → Storage**
+This document explains the refactored Plantalk architecture. It focuses on responsibilities, boundaries, and data flow so new contributors can ship without breaking core flows.
 
------
+---
 
-### 1\. Technology Stack
+## 1) Design Principles
 
-| Layer | Key Technology | Purpose |
-| :--- | :--- | :--- |
-| **Framework** | React Native / Expo | Cross-platform development. |
-| **Navigation** | Expo Router | File-system-based routing for a native stack/tab experience. |
-| **UI/Animation** | React Native Reanimated | Fluid, native-level animations and gestures. |
-| **Language** | TypeScript | Enhanced code quality and type safety. |
-| **Data Flow** | React Context (Custom Providers) | Global state management for journal entries and app status. |
-| **Transcription** | Gemini API (via custom service) | Transcribes audio to raw text. |
-| **Refinement** | Gemini API (via custom service) | Cleans, formats, and titles the transcription. |
+* **Feature islands**: Each feature is self‑contained (UI + local hooks). Features never import from other features.
+* **Core ≠ React**: Business logic (DB, audio, AI) lives in Core services. They are framework‑agnostic and testable.
+* **Providers orchestrate**: Providers compose services, manage app‑wide state, and expose clean hooks.
+* **Shared is leaf-only**: Reusable UI, hooks, and helpers. Shared never imports from Core or Features.
+* **Stable surfaces**: Each module exposes a narrow public API via an `index.ts` barrel.
 
------
+---
 
-### 2\. Visual Architecture
-
-The application follows a layered architecture with a clear, unidirectional data flow. Commands originate from the UI and flow down through each layer to the persistent storage.
+## 2) Layered Architecture
 
 ```
-[ UI Layer (Screens & Components) ]
-       ↓ (User Actions)
-[ Hooks Layer (State & Logic) ]
-       ↓ (Calls Context Methods)
-[ Context Layer (Global State - SecureJournalProvider) ]
-       ↓ (Orchestrates Services)
-[ Services Layer (Business Logic & APIs) ]
-       ↓ (Data Processing & Validation)
-[ Storage Layer (SQLite & Secure File System) ]
+App (routes)
+  ↓
+Features (UI + feature hooks)
+  ↓
+Core (providers ←→ services)
+  ↓
+Shared (UI primitives, hooks, utils, types, constants)
 ```
 
------
+### App Layer — Routing & Composition
 
-### 3\. Core Architecture Layers
+* **Where**: `app/`
+* **What**: Expo Router screens. Compose feature components and consume provider hooks.
+* **Rule**: No direct service calls. No business logic.
 
-The application's data flow is a pipeline that follows clear layers from the user interface down to secure storage. This separation of concerns makes the codebase predictable and easy to navigate.
+### Features Layer — Vertical Slices
 
-#### A. UI (View) Layer
+* **Where**: `src/features/*`
+* **What**: Screen‑level UI components and feature‑local hooks.
+* **Rule**: May import **Shared** and **Core providers**. **Must not** import other features.
 
-  * **Role**: Displays data and captures user input. It is the entry point for all user actions.
-  * **Location**:
-      * **`app/`**: Contains all screens, which are directly tied to app routes.
-          * `app/(tabs)/`: Primary tab screens like Journal (`journal.tsx`) and Insights (`insights.tsx`).
-          * `app/record.tsx`: The modal screen for capturing a new voice entry.
-      * **`components/`**: Contains reusable UI building blocks used across screens, such as `AudioPlayer.tsx` and `HistoryList.tsx`.
+### Core Layer — State + I/O
 
-#### B. Hooks Layer
+* **Where**: `src/core/*`
+* **Providers**: App‑wide state machines that orchestrate services and expose hooks.
+* **Services**: Pure business logic and I/O (SQLite, file system, AI). No React.
+* **Rule**: Services never import from Features/Shared UI.
 
-  * **Role**: Manages complex component state and abstracts native device features (e.g., audio recording). Hooks capture user intent and trigger actions on the Context layer.
-  * **Location**: `hooks/`.
-      * **Examples**: `useRecorder.ts` manages the entire recording lifecycle. `useAudioPlayer.ts` controls audio playback.
+### Shared Layer — Reuse
 
-#### C. Context Layer (State)
+* **Where**: `src/shared/*`
+* **What**: UI primitives, cross‑cutting hooks, utilities, types, constants.
+* **Rule**: Shared cannot depend on Core or Features.
 
-  * **Role**: Acts as the application's central hub and single source of truth for global state (`JournalState`). It is exposed via the `useSecureJournal` hook and orchestrates the necessary service calls to fulfill commands like `addEntry`.
-  * **Location**: `context/SecureJournalProvider.tsx`.
+---
 
-#### D. Services Layer (Business Logic)
+## 3) Directory Map (current)
 
-  * **Role**: Contains all non-UI logic, external API integrations, and the core data persistence pipeline. This robust layer was designed specifically to solve the data loss and corruption issues of the previous JSON-based storage system, providing production-grade data integrity.
-  * **Location**: `services/`.
-      * **`TranscriptionService.ts`**: Orchestrates the entire voice-to-text pipeline, from queuing to completion.
-      * **`SpeechService.ts` & `TextService.ts`**: Integrate with the Gemini API for audio transcription and text refinement, respectively.
-      * **`DataValidationService.ts`**: Performs automatic data corruption detection and repair.
+```
+app/
+  (tabs)/
+    _layout.tsx
+    index.tsx          # Home / record entry CTA
+    journal.tsx        # Sectioned Journal List
+    insights.tsx       # Insights + Dev tools (e.g., audio migration)
+  entry/[id].tsx       # Entry detail screen
+  _layout.tsx          # Root provider stack
+  record.tsx           # Recording modal
 
-#### E. Storage Layer (Persistence)
+src/
+  core/
+    providers/
+      journal/
+        SecureJournalProvider.tsx     # Hook: useSecureJournal()
+        index.ts                      # Public surface
+        types.ts
+        initialization/
+          initializeServices.ts
+          migrationService.ts
+          stateLoader.ts
+        operations/
+          entryOperations.ts
+          backupOperations.ts
+          streakOperations.ts
+          diagnosticsOperations.ts
+    services/
+      ai/
+        TextService.ts
+        SpeechService.ts
+        TranscriptionService.ts
+        index.ts
+      storage/
+        DatabaseService.ts
+        SecureStorageService.ts
+        BackupService.ts
+        DataValidationService.ts
+        index.ts
 
-  * **Role**: Provides secure, persistent, and reliable on-device storage, abstracting away the complexities of the database and encrypted file system.
-  * **Location**: Internal logic within the `services/` directory.
-      * **`DatabaseService.ts`**: Manages the local SQLite database, providing ACID compliance and indexed storage for all journal entries and metadata.
-      * **`SecureStorageService.ts`**: Manages AES-256 encryption and secures the encryption key in the device's Keychain.
-      * **`BackupService.ts`**: Manages the creation and restoration of secure, encrypted backups.
+  features/
+    recording/
+      components/Waveform.tsx
+      hooks/useRecorder.ts
+      index.ts
+    journal/
+      components/HistoryList.tsx
+      components/EntryItem.tsx
+      components/HistoryHeader.tsx
+      components/AudioPathMigration.tsx
+      index.ts
+    entry-detail/
+      components/EntryContent.tsx
+      components/EntryDetailHeader.tsx
+      hooks/useEntryEditor.ts
+      hooks/useEntryOptions.ts
+      hooks/useDateRevealAnimation.ts
+      index.ts
+    audio-player/
+      components/AudioPlayer.tsx
+      hooks/useAudioPlayer.ts
+      index.ts
 
------
+  shared/
+    components/
+      layout/ScreenWrapper.tsx
+      ui/IconSymbol(.ios).tsx
+      ui/TabBarBackground(.ios).tsx
+      ui/ExternalLink.tsx
+      ui/HapticTab.tsx
+      index.ts
+    hooks/
+      useColorScheme(.web).ts
+      index.ts
+    utils/
+      audioPath.ts
+      index.ts
+    types/
+      journal.ts
+      index.ts
 
-### 4\. Key Feature Flow: Voice-to-Entry Pipeline
+styles/
+  theme.ts
+```
 
-This flow is asynchronous and runs in the background, handled by the `TranscriptionService`.
+---
 
-1.  **Record**: A user records their voice → `useRecorder` captures the audio to a temporary `.m4a` file.
-2.  **Save/Queue**: The user finishes → `useRecorder` calls the `addEntry` function on `SecureJournalProvider`.
-3.  **Persistence**: `SecureJournalProvider` saves an entry placeholder, moves the audio file to permanent storage, and adds the task to the `TranscriptionService` queue.
-4.  **Transcribe**: `TranscriptionService` calls the `SpeechService` to convert the audio to a **Raw Transcript** using the Gemini API.
-5.  **Refine**: The raw transcript is passed to the `TextService`, which uses the Gemini API to clean the text, format it, and generate a title, returning **Refined Text**.
-6.  **Update State**: `TranscriptionService` calls `updateEntryTranscription` on `SecureJournalProvider`. The final text and title are saved to the SQLite database and the UI updates to show the completed entry.
+## 4) Data & Control Flows
 
------
+### A) Recording → Entry Creation
 
-### 5\. Data Privacy and Integrity
+1. **UI**: `app/record.tsx` uses `features/recording` (`useRecorder`, `Waveform`).
+2. **Finish**: `useRecorder` seals temp audio and calls `useSecureJournal().addEntry()`.
+3. **Provider**: Journal provider inserts a placeholder entry (stage: `transcribing`) and triggers the pipeline.
+4. **Services**: `TranscriptionService` → `SpeechService` (STT), then `TextService` (refinement & title).
+5. **DB**: `DatabaseService` persists `rawText`, then `title/text`, stage → `completed`.
 
-The architecture is built on a **local-first** and **secure-by-default** principle.
+### B) Journal Listing
 
-  * **Local Storage**: All journal data, including entries and audio files, remains encrypted on the user's device.
-  * **SQLite**: Replaces error-prone JSON files, ensuring transactional integrity and preventing data corruption.
-  * **Encryption**: AES-256 encryption and device keychain protection are used for all sensitive data.
-  * **Self-Healing**: The `DataValidationService` provides automatic recovery from data corruption, ensuring data is durable and available.
-  * **API Usage**: Audio data is sent to the Gemini API only for the necessary processing steps, minimizing its time outside the secure local environment.
+1. **UI**: `app/(tabs)/journal.tsx` renders `features/journal/HistoryList`.
+2. **Data**: `useSecureJournal().state.entries` (already filtered/sorted in provider selectors).
+3. **UX**: Sectioned by day (“Today”, “Yesterday”, “Previous 7/30 Days”, then Month/Year); swipe‑to‑delete hooks into provider ops.
 
-  alternatives
-  choice of architecture
-  
+### C) Entry Detail
+
+1. **UI**: `app/entry/[id].tsx` composes `EntryDetailHeader`, `AudioPlayer`, and `EntryContent`.
+2. **Retry**: Failed stages expose **Retry Transcription/Refinement** that call provider methods, which re‑enqueue jobs.
+
+### D) Backup & Migration
+
+* **BackupService**: encrypted export/import of DB rows + audio files.
+* **Audio path migration** (relative ↔ absolute) exposed via `features/journal/AudioPathMigration` and helpers in `shared/utils/audioPath`.
+
+---
+
+## 5) Providers (Journal)
+
+**Responsibilities**
+
+* App‑wide state for entries and metadata.
+* Boot sequence: open DB, run migrations, rehydrate state, resume pending jobs.
+* CRUD operations: create/update/delete/restore, plus streaks and diagnostics.
+* Pipeline orchestration: advance stages and update UI via state.
+
+**Public Hook**
+
+```ts
+const {
+  state,                 // entries, counts, etc.
+  addEntry,              // create placeholder + enqueue
+  updateEntry,           // patch fields
+  deleteEntry,           // soft/hard delete
+  updateEntryProgress,   // stage transitions
+  updateEntryTranscription,
+  retranscribeEntry,     // manual retry helpers
+} = useSecureJournal();
+```
+
+**Policy**
+
+* All writes wrapped in DB transactions; state mirrors DB after commit.
+* Stage transitions are linear (`transcribing → refining → completed`, or `*_failed`).
+
+---
+
+## 6) Services
+
+* **DatabaseService**: SQLite schema, migrations, queries, indices. No UI.
+* **SecureStorageService**: key/value secrets & tokens.
+* **BackupService**: encrypted archive export/import, plus file copy orchestration.
+* **DataValidationService**: light sanity checks before writes.
+* **SpeechService**: speech‑to‑text for audio.
+* **TextService**: refinement + title generation.
+* **TranscriptionService**: queue, retries, and stage orchestration.
+
+**Rules**
+
+* No React imports.
+* Deterministic, unit‑testable functions.
+
+---
+
+## 7) Dependency Rules (enforced by lint)
+
+* **Features →** Shared, Core *providers* (hooks only).
+* **Core providers →** Core services.
+* **Core services →** (platform APIs, storage, network). No React/Features.
+* **Shared →** nothing outside Shared. (Absolutely no Core imports.)
+
+Use only public barrels (`index.ts`) from each module to avoid deep linking into internals.
+
+---
+
+## 8) Initialization & Migrations
+
+On app start (root layout):
+
+1. Mount `SecureJournalProvider`.
+2. Provider runs `initializeServices`: open DB, verify schema, run migrations.
+3. Load entries into memory and resume pending jobs (`transcribing/refining`).
+4. Expose ready state to screens.
+
+**Migrations**
+
+* Versioned, idempotent steps (e.g., new columns, indices).
+* Audio path normalization handled via helpers in `shared/utils/audioPath`.
+
+---
+
+## 9) Error Handling (high‑level)
+
+* **Recording/Save**: user‑facing toasts + retry; preserve temp audio when DB write fails.
+* **Transcription/Refinement**: stage → `*_failed`, show clear retry options; store last error code/message.
+* **Deletion**: hard delete removes DB row **and** audio file; failures schedule cleanup.
+* **Backup/Restore**: cryptographic checks; never partial‑restore without user confirmation.
+
+---
+
+## 10) Performance Notes
+
+* Section lists pre‑grouped by provider selectors to minimize render work.
+* Long bodies loaded lazily on entry detail; list uses short preview text.
+* Queue concurrency kept low by default to avoid device thrash.
+* Heavy work (backup, migrations) batched and off critical path.
+
+---
+
+## 11) Testing Surfaces
+
+* **Unit**: services (Database, Speech/Text, Transcription orchestration, Backup).
+* **Integration**: provider flows (create → stages → complete; delete → file cleanup).
+* **UI**: recording modal states, journal list grouping, entry detail retries.
+
+---
+
+## 12) Future Extensions (scaffolding only)
+
+* **Search feature**: add `src/core/services/search/` (FTS/semantic later), `src/core/providers/search/`, and `src/features/search/`. Gate with runtime capability checks and job queues for indexing.
+* **Settings feature**: centralize preferences (theme, transcription engines, backup targets).
+
+---
+
+## 13) Quick Rules of Thumb
+
+* Import from barrels, not deep files.
+* Features don’t talk to each other.
+* Shared doesn’t know Core.
+* Services don’t know React.
+* Providers are the only bridge between UI and services.
