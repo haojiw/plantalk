@@ -1,5 +1,5 @@
-import { JournalEntry, JournalState } from '@/shared/types/journal';
-import { getAbsoluteAudioPath } from '@/core/services/audio/audioPath';
+import { getAbsoluteAudioPath } from '@/core/services/audio';
+import { JournalEntry, JournalState } from '@/shared/types';
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as SQLite from 'expo-sqlite';

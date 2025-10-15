@@ -1,5 +1,5 @@
-import { EntryItem } from '@/features/journal/components/EntryItem';
-import { JournalEntry } from '@/shared/types/journal';
+import { EntryItem } from '@/features/journal';
+import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';

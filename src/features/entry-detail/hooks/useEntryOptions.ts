@@ -1,6 +1,6 @@
-import { transcriptionService } from '@/core/services/ai/TranscriptionService';
-import { JournalEntry } from '@/shared/types/journal';
-import { getAbsoluteAudioPath } from '@/core/services/audio/audioPath';
+import { transcriptionService } from '@/core/services/ai';
+import { getAbsoluteAudioPath } from '@/core/services/audio';
+import { JournalEntry } from '@/shared/types';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';

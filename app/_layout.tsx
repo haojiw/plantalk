@@ -4,44 +4,44 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { SecureJournalProvider } from '@/core/providers/journal/SecureJournalProvider';
+import { SecureJournalProvider } from '@/core/providers/journal';
 import {
-    DMSans_400Regular,
-    DMSans_700Bold,
+  DMSans_400Regular,
+  DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 
 import {
-    DMSerifDisplay_400Regular,
+  DMSerifDisplay_400Regular,
 } from '@expo-google-fonts/dm-serif-display';
 
 import {
-    Inter_400Regular,
-    Inter_700Bold,
+  Inter_400Regular,
+  Inter_700Bold,
 } from '@expo-google-fonts/inter';
 
 import {
-    Manrope_400Regular,
-    Manrope_700Bold,
+  Manrope_400Regular,
+  Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
 
 import {
-    Karla_400Regular,
-    Karla_700Bold,
+  Karla_400Regular,
+  Karla_700Bold,
 } from '@expo-google-fonts/karla';
 
 import {
-    Sora_400Regular,
-    Sora_600SemiBold,
+  Sora_400Regular,
+  Sora_600SemiBold,
 } from '@expo-google-fonts/sora';
 
 import {
-    Lora_400Regular,
-    Lora_700Bold,
+  Lora_400Regular,
+  Lora_700Bold,
 } from '@expo-google-fonts/lora';
 
 import {
-    Lato_400Regular,
-    Lato_700Bold,
+  Lato_400Regular,
+  Lato_700Bold,
 } from '@expo-google-fonts/lato';
 
 

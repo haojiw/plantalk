@@ -5,15 +5,11 @@ import React from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
 
-import { AudioPlayer } from '@/features/audio-player/components/AudioPlayer';
-import { EntryContent } from '@/features/entry-detail/components/EntryContent';
-import { EntryDetailHeader } from '@/features/entry-detail/components/EntryDetailHeader';
-import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
-import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
-import { useDateRevealAnimation } from '@/features/entry-detail/hooks/useDateRevealAnimation';
-import { useEntryEditor } from '@/features/entry-detail/hooks/useEntryEditor';
-import { useEntryOptions } from '@/features/entry-detail/hooks/useEntryOptions';
-import { transcriptionService } from '@/core/services/ai/TranscriptionService';
+import { useSecureJournal } from '@/core/providers/journal';
+import { transcriptionService } from '@/core/services/ai';
+import { AudioPlayer } from '@/features/audio-player';
+import { EntryContent, EntryDetailHeader, useDateRevealAnimation, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
+import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
 export default function EntryDetailScreen() {

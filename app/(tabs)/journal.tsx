@@ -7,16 +7,16 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
 } from 'react-native-reanimated';
 
-import { HistoryList } from '@/features/journal/components/HistoryList';
-import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
-import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
+import { useSecureJournal } from '@/core/providers/journal';
+import { HistoryList } from '@/features/journal';
+import { ScreenWrapper } from '@/shared/components';
+import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
-import { JournalEntry } from '@/shared/types/journal';
 
 interface SectionData {
   title: string;

@@ -1,4 +1,4 @@
-import { getAbsoluteAudioPath } from '@/core/services/audio/audioPath';
+import { getAbsoluteAudioPath } from '@/core/services/audio';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 

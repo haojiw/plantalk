@@ -3,17 +3,17 @@ import React, { useEffect } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Extrapolate,
-  interpolate,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSpring,
-  withTiming,
+    Extrapolate,
+    interpolate,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSpring,
+    withTiming,
 } from 'react-native-reanimated';
 
-import { JournalEntry } from '@/shared/types/journal';
+import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
 
 const { width: screenWidth } = Dimensions.get('window');

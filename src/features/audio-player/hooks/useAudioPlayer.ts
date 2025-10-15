@@ -1,4 +1,4 @@
-import { getAbsoluteAudioPath } from '@/core/services/audio/audioPath';
+import { getAbsoluteAudioPath } from '@/core/services/audio';
 import { setAudioModeAsync, useAudioPlayerStatus, useAudioPlayer as useExpoAudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';

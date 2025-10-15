@@ -1,4 +1,4 @@
-import { useAudioPlayer, UseAudioPlayerProps } from '@/features/audio-player/hooks/useAudioPlayer';
+import { useAudioPlayer, UseAudioPlayerProps } from '@/features/audio-player';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';

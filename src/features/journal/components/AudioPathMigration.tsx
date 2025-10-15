@@ -1,7 +1,7 @@
-import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
-import { databaseService } from '@/core/services/storage/DatabaseService';
+import { useSecureJournal } from '@/core/providers/journal';
+import { getRelativeAudioPath, isRelativePath } from '@/core/services/audio';
+import { databaseService } from '@/core/services/storage';
 import { theme } from '@/styles/theme';
-import { getRelativeAudioPath, isRelativePath } from '@/core/services/audio/audioPath';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 

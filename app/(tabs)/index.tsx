@@ -9,8 +9,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
-import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
+import { useSecureJournal } from '@/core/providers/journal';
+import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
 export default function EntryScreen() {

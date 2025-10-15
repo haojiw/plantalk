@@ -15,8 +15,8 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
-import { AudioPathMigration } from '@/features/journal/components/AudioPathMigration';
-import { ScreenWrapper } from '@/shared/components/layout/ScreenWrapper';
+import { AudioPathMigration } from '@/features/journal';
+import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
 export default function InsightsScreen() {

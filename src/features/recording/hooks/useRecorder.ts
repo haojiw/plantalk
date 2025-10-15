@@ -1,10 +1,10 @@
-import { useSecureJournal } from '@/core/providers/journal/SecureJournalProvider';
+import { useSecureJournal } from '@/core/providers/journal';
 import {
-  AudioModule,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState
+    AudioModule,
+    RecordingPresets,
+    setAudioModeAsync,
+    useAudioRecorder,
+    useAudioRecorderState
 } from 'expo-audio';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';

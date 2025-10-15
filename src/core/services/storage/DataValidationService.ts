@@ -1,4 +1,4 @@
-import { JournalEntry, JournalState } from '@/shared/types/journal';
+import { JournalEntry, JournalState } from '@/shared/types';
 import * as FileSystem from 'expo-file-system/legacy';
 import { backupService } from './BackupService';
 import { databaseService } from './DatabaseService';
