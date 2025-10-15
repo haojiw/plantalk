@@ -104,7 +104,7 @@ export default function InsightsScreen() {
             'Weekly Recap',
             <View>
               <Text style={styles.contentText}>
-                Your weekly summary will appear here. We'll analyze your journal entries to show patterns, 
+                Your weekly summary will appear here. We&apos;ll analyze your journal entries to show patterns, 
                 themes, and highlights from the past seven days.
               </Text>
               <View style={styles.statsContainer}>
@@ -131,7 +131,7 @@ export default function InsightsScreen() {
             'Your Patterns',
             <View>
               <Text style={styles.contentText}>
-                Based on your journal entries, we'll identify recurring themes, emotional patterns, 
+                Based on your journal entries, we&apos;ll identify recurring themes, emotional patterns, 
                 and topics you frequently explore. This space will help you understand yourself better.
               </Text>
               <View style={styles.patternsList}>

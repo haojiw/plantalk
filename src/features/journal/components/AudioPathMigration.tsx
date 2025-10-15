@@ -1,12 +1,11 @@
 import { useSecureJournal } from '@/core/providers/journal';
-import { getRelativeAudioPath, isRelativePath } from '@/core/services/audio';
-import { databaseService } from '@/core/services/storage';
+import { getRelativeAudioPath, isRelativePath } from '@/shared/utils';
 import { theme } from '@/styles/theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export const AudioPathMigration: React.FC = () => {
-  const { state, isLoading: contextLoading, emergencyRecovery, runStorageDiagnostics } = useSecureJournal();
+  const { state, isLoading: contextLoading, updateEntry, emergencyRecovery, runStorageDiagnostics } = useSecureJournal();
   const [isMigrating, setIsMigrating] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -56,7 +55,7 @@ export const AudioPathMigration: React.FC = () => {
           const newPath = getRelativeAudioPath(oldPath);
           
           if (newPath && newPath !== oldPath) {
-            await databaseService.updateEntry(entry.id, { audioUri: newPath });
+            await updateEntry(entry.id, { audioUri: newPath });
             successCount++;
           } else {
             errorCount++;

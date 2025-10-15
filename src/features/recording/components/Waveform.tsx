@@ -1,25 +1,24 @@
 import { theme } from '@/styles/theme';
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 interface WaveformProps {
   waveformValues: Array<{ value: number }>;
 }
 
 export const Waveform: React.FC<WaveformProps> = ({ waveformValues }) => {
-  // Create animated styles for each waveform bar
-  const waveAnimatedStyles = waveformValues.map((waveform) => 
-    useAnimatedStyle(() => ({
-      height: `${Math.max(8, waveform.value * 100)}%`,
-    }))
-  );
-
   return (
     <View style={styles.waveformContainer}>
       <View style={styles.waveform}>
-        {waveAnimatedStyles.map((style, index) => (
-          <Animated.View key={index} style={[styles.waveBar, style]} />
+        {waveformValues.map((waveform, index) => (
+          <Animated.View 
+            key={index} 
+            style={[
+              styles.waveBar, 
+              { height: Math.max(8, waveform.value * 100) }
+            ]} 
+          />
         ))}
       </View>
       

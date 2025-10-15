@@ -1,6 +1,5 @@
-import { transcriptionService } from '@/core/services/ai';
-import { getAbsoluteAudioPath } from '@/core/services/audio';
 import { JournalEntry } from '@/shared/types';
+import { getAbsoluteAudioPath } from '@/shared/utils';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
@@ -10,6 +9,7 @@ export interface UseEntryOptionsProps {
   updateEntry: (id: string, updates: Partial<JournalEntry>) => Promise<void>;
   updateEntryProgress: (id: string, stage: 'transcribing' | 'refining') => void;
   updateEntryTranscription: (id: string, result: any, status: 'completed' | 'failed') => void;
+  retranscribeEntry: (entry: JournalEntry) => void;
   onEditEntry: () => void;
 }
 
@@ -18,7 +18,7 @@ export interface UseEntryOptionsReturn {
   showRawTranscription: () => void;
 }
 
-export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updateEntryTranscription, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
+export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updateEntryTranscription, retranscribeEntry, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
   const updateEntryDate = async (newDate: Date) => {
     if (!entry) return;
     
@@ -183,32 +183,10 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
                 processingStage: 'transcribing'
               });
 
-              // Add to transcription queue
-              transcriptionService.addToQueue({
-                entryId: entry.id,
-                audioUri: entry.audioUri!,
-                audioDurationSeconds: entry.duration,
-                onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
-                  updateEntryProgress(entryId, stage);
-                },
-                onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
-                  if (status === 'completed') {
-                    updateEntryTranscription(entryId, {
-                      ...result,
-                      processingStage: result.processingStage || 'completed'
-                    }, status);
-                    Alert.alert('Success', 'Re-transcription completed successfully');
-                  } else {
-                    updateEntryTranscription(entryId, {
-                      refinedTranscription: result.refinedTranscription || 'Re-transcription failed. Please try again.',
-                      rawTranscription: result.rawTranscription || '',
-                      aiGeneratedTitle: result.aiGeneratedTitle || entry.title,
-                      processingStage: result.processingStage || 'transcribing_failed'
-                    }, status);
-                    Alert.alert('Error', 'Re-transcription failed. Please try again.');
-                  }
-                }
-              });
+              // Add to transcription queue via provider
+              retranscribeEntry(entry);
+              
+              Alert.alert('Processing', 'Re-transcription started. This may take a moment.');
             } catch (error) {
               console.error('Error starting re-transcription:', error);
               Alert.alert('Error', 'Failed to start re-transcription');

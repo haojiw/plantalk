@@ -1,7 +1,7 @@
 import { transcriptionService } from '@/core/services/ai';
-import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath, isRelativePath } from '@/core/services/audio';
 import { backupService, databaseService, dataValidationService, secureStorageService } from '@/core/services/storage';
 import { JournalEntry, JournalState } from '@/shared/types';
+import { getAbsoluteAudioPath, getAudioDirectory, getRelativeAudioPath, isRelativePath } from '@/shared/utils';
 import * as FileSystem from 'expo-file-system/legacy';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
@@ -15,6 +15,7 @@ interface SecureJournalContextType {
   updateEntry: (entryId: string, updates: Partial<JournalEntry>) => Promise<void>;
   updateEntryTranscription: (entryId: string, result: any, status: 'completed' | 'failed') => void;
   updateEntryProgress: (entryId: string, stage: 'transcribing' | 'refining') => void;
+  retranscribeEntry: (entry: JournalEntry) => void;
   getDaysSinceLastEntry: () => number;
   resetStreak: () => void;
   // Secure storage specific methods
@@ -501,6 +502,27 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     }
   };
 
+  const retranscribeEntry = (entry: JournalEntry) => {
+    if (!entry.audioUri) {
+      console.error('[SecureJournalProvider] Cannot retranscribe entry without audio');
+      return;
+    }
+
+    console.log('[SecureJournalProvider] Adding entry to transcription queue:', entry.id);
+    
+    transcriptionService.addToQueue({
+      entryId: entry.id,
+      audioUri: entry.audioUri,
+      audioDurationSeconds: entry.duration,
+      onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
+        updateEntryProgress(entryId, stage);
+      },
+      onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
+        updateEntryTranscription(entryId, result, status);
+      },
+    });
+  };
+
   const resetStreak = async () => {
     try {
       await databaseService.updateAppState({ streak: 0 });
@@ -887,6 +909,7 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     updateEntry,
     updateEntryTranscription,
     updateEntryProgress,
+    retranscribeEntry,
     getDaysSinceLastEntry,
     resetStreak,
     performHealthCheck,

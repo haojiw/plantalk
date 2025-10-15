@@ -15,7 +15,7 @@ import { theme } from '@/styles/theme';
 export default function EntryDetailScreen() {
   // 1. Get entry and context functions
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, updateEntry, updateEntryProgress, updateEntryTranscription } = useSecureJournal();
+  const { state, updateEntry, updateEntryProgress, updateEntryTranscription, retranscribeEntry } = useSecureJournal();
   const entry = state.entries.find(e => e.id === id);
 
   // 2. Initialize all hooks
@@ -38,6 +38,7 @@ export default function EntryDetailScreen() {
     updateEntry,
     updateEntryProgress,
     updateEntryTranscription,
+    retranscribeEntry,
     onEditEntry: handleEditEntry 
   });
 
