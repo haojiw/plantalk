@@ -1,251 +1,146 @@
-# Transcription Pipeline
+# Feature Flow: The Transcription Pipeline Journey
 
-Scope: audio file → queue → transcribe → refine → update entry.
+This document explains what happens in the background *after* your recording is saved. This is the "magic" that turns your raw audio file into a polished, titled, and formatted journal entry.
 
-**Files**
+The journey starts exactly where the "Recording Flow" ended: your new entry, with a "Processing..." status, has just been added to the database and the journal list.
 
-* `services/TranscriptionService.ts` — orchestrates the pipeline; manages queue, retries, and stage transitions.
-* `services/TextService.ts` — calls Gemini for refinement (cleaning, structuring, title).
-* `app/entry/[id].tsx` — per-entry UI; retry handlers for failed stages.
-* `components/EntryContent.tsx` — renders content by stage (processing vs. final).
+### High-Level Flow
 
----
+```mermaid
+graph TD
+    A(Recording Flow Ends) --> B(entryOperations.addEntry);
+    B --> C(transcriptionService.addToQueue);
+    
+    subgraph TranscriptionService (The Project Manager)
+        C --> D{Process Queue (1 at a time)};
+        D --> E(onProgress: 'transcribing');
+        E --> F[SpeechService: transcribeAudio];
+        F --> G(Gemini API - Speech);
+        G --> H{Raw Text};
+        H --> I(onProgress: 'refining');
+        I --> J[TextService: refineTranscription];
+        J --> K(Gemini API - Text);
+        K --> L{Title + Refined Text};
+        L --> M(onComplete: 'completed');
+    end
 
-## Overview
+    subgraph Provider & UI (The Feedback Loop)
+        E --> P1(Provider: updateEntryProgress);
+        P1 --> P2(DB: stage = 'transcribing');
+        P2 --> P3(UI: "Transcribing audio...");
 
-1. **Create entry**: recording flow persists a placeholder with `processingStage = "transcribing"` and `rawText = null`, `text = null`.
-2. **Queue**: `TranscriptionService` picks up new entries and enqueues their audio for processing.
-3. **Transcribe**: send audio to Gemini; receive **Raw Transcript** → save to DB.
-4. **Refine**: send raw transcript to Gemini; receive **Title + Refined Text** → save to DB.
-5. **Complete**: mark `processingStage = "completed"`; UI re-renders with final content.
+        I --> P4(Provider: updateEntryProgress);
+        P4 --> P5(DB: stage = 'refining');
+        P5 --> P6(UI: "Refining text...");
 
----
-
-## Stages (Enum)
-
-```ts
-export type ProcessingStage =
-  | 'transcribing'
-  | 'refining'
-  | 'completed'
-  | 'transcribe_failed'
-  | 'refine_failed';
+        M --> P7(Provider: updateEntryTranscription);
+        P7 --> P8(DB: stage = 'completed' + save text);
+        P8 --> P9(UI: Show final entry);
+    end
+    
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#f9f,stroke:#333,stroke-width:2px
+    style M fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
-**Invariant**
+-----
 
-* Exactly one stage is active per entry.
-* Stage can only advance forward (or to a *_failed state). On manual retry we resume at the earliest failed stage.
+## 1\. The Handoff
 
----
+The "Recording Flow" finished by calling `addEntry()`. The *very last thing* this function does, after saving the entry to the database, is to make a call to the "project manager" of the transcription pipeline:
 
-## Queue Model
-
-* **Type**: in-memory FIFO with persistence hints (re-hydrates from DB on app start to pick up unfinished work).
-* **Concurrency**: single-flight by default (N=1) to avoid device thrash; configurable if needed.
-* **Backpressure**: if offline or API errors, queue holds items and backs off.
-* **Identity**: each job references `entryId` and `audioUri`.
-
-**Lifecycle**
-
-1. `enqueue(entryId, audioUri)` when a new entry is saved.
-2. Worker loop pulls the head job if no other job is running.
-3. After each stage, persist results and advance stage.
-4. On error, set failed stage on entry and stop processing that job.
-
----
-
-## Transcription (Speech → Text)
-
-**Input**: `audioUri` (e.g., `.m4a`), duration.
-
-**Call**
-
-```ts
-const rawText = await SpeechService.transcribeAudio({ audioUri, timeoutMs });
-```
-
-**Timeout**
-
-* Dynamic based on duration; add headroom for network (e.g., `base + k * seconds`).
-
-**Persist**
-
-```ts
-Database.updateEntry(entryId, {
-  rawText,
-  processingStage: 'refining',
+```typescript
+// Inside entryOperations.ts
+transcriptionService.addToQueue({
+  entryId: newEntry.id,
+  audioUri: newEntry.audioUri,
+  // ...and all the callbacks
 });
 ```
 
-**Errors → `transcribe_failed`**
+This call is the starting pistol for the entire pipeline.
 
-* network / 5xx
-* payload/format errors
-* auth (missing/invalid API key)
+-----
 
-**UI**
+## 2\. The Project Manager (`TranscriptionService.ts`)
 
-* In `EntryContent`, show **“Transcribing…”** with a lightweight skeleton.
+This service, located at `src/core/services/ai/TranscriptionService.ts`, is the "brain" of the operation. It maintains a **FIFO (First-In, First-Out) queue** of jobs. This is critical because it ensures your app only processes **one audio file at a time**, preventing it from overwhelming your device or hitting API rate limits.
 
----
+As soon as your new entry hits the queue, the service's `processQueue` method picks it up and begins its two-step journey.
 
-## Refinement (Clean + Title)
+-----
 
-**Input**: `rawText`.
+## 3\. The Journey: From Audio to Text
 
-**Call**
+The service executes the `processTranscriptionTask` for your entry.
 
-```ts
-const { title, text } = await TextService.refineTranscription({ rawText, timeoutMs });
-```
+### Step 1: The Raw Transcript (`SpeechService.ts`)
 
-**Persist**
+First, the app needs to turn your voice into plain text.
 
-```ts
-Database.updateEntry(entryId, {
-  title,
-  text,
-  processingStage: 'completed',
-});
-```
+1.  **Callback 1 (UI Update):** The service immediately calls the `onProgress(entryId, 'transcribing')` callback.
+      * This callback traces back to the `SecureJournalProvider`, which updates the entry in the **SQLite database** with `processingStage: 'transcribing'`.
+      * The UI, which is listening for state changes, re-renders to show "Transcribing audio...".
+2.  **The Work:** The service calls `speechService.transcribeAudio(audioUri)`.
+3.  **The "Vault" (`SpeechService.ts`):** This specialized service does the following:
+      * Gets the **absolute path** for your audio file (e.g., `file:///.../audio/audio_123.m4a`).
+      * Reads the entire audio file into a **base64-encoded** string.
+      * Sends this large string to the **Google Gemini API** (`gemini-2.5-flash`) with a simple prompt: "Generate a transcript of the speech.".
+      * It also calculates a **dynamic timeout** based on your audio's duration—longer recordings are given more time to process.
+4.  **The Result:** The Gemini API returns the raw, unformatted transcription (e.g., "today i reflected on my journey and realized...").
 
-**Errors → `refine_failed`**
+### Step 2: The Refinement (`TextService.ts`)
 
-* network / 5xx
-* prompt/format errors
-* auth
+Now that we have the raw text, the project manager moves to the next stage.
 
-**UI**
-
-* In `EntryContent`, show **“Refining…”** skeleton.
-
----
-
-## Retry Logic
-
-### Automatic (background)
-
-* **Policy**: exponential backoff per stage.
-* **Schedule**: try 1s, 5s, 30s, 2m, then give up and mark `*_failed`.
-* **Max Attempts**: 5 per stage (configurable).
-* **Reset Conditions**: app relaunch resumes pending jobs unless terminal failure is set.
-
-### Manual (from UI)
-
-* Surfaces in `app/entry/[id].tsx` for `*_failed` states.
-* **Buttons**:
-
-  * `Retry transcription` if `transcribe_failed` → sets stage back to `transcribing` and re-enqueues.
-  * `Retry refinement` if `refine_failed` → sets stage to `refining` and re-enqueues.
-* Show last error message (short, developer-friendly code + plain message).
-
----
-
-## Failure UI (per stage)
-
-| Stage             | Title                             | Body                              | Actions                                            |
-| ----------------- | --------------------------------- | --------------------------------- | -------------------------------------------------- |
-| transcribe_failed | “Couldn’t transcribe this entry.” | “Check connection or try again.”  | **Retry transcription** / **Delete entry**         |
-| refine_failed     | “Couldn’t clean up the text.”     | “We’ll keep your raw transcript.” | **Retry refinement** / **Keep as-is** / **Delete** |
-
-* If `rawText` exists on `refine_failed`, display it read-only so the entry remains usable.
-* Deleting asks for confirmation and removes audio + DB row.
-
----
-
-## Data Updates (DB Writes)
-
-Minimum fields touched across the pipeline:
-
-```ts
-Entry {
-  id: string
-  createdAt: number
-  durationMs: number
-  audioUri: string
-  // processing
-  processingStage: ProcessingStage
-  // text
-  rawText?: string | null
-  text?: string | null
-  title?: string | null
-  // errors (optional)
-  lastErrorCode?: string | null
-  lastErrorMessage?: string | null
-}
-```
-
-**Indexing**
-
-* index by `createdAt` (desc) for journal listing
-* optional index on `processingStage` to quickly find pending/failed
-
----
-
-## Callbacks & Notifications
-
-* `onStageChange(entryId, stage)` — emit to update live UI (e.g., via context/provider).
-* `onError(entryId, stage, err)` — log + set `lastError*` fields.
-* `onComplete(entryId)` — emit for analytics (“entry_completed”).
-
----
-
-## Performance & Robustness
-
-* Stream upload where supported; otherwise chunked upload.
-* Cap max audio duration (configurable). Very long files warn before upload.
-* Normalize audio (sample rate/bitrate) on-device to reduce failures.
-* Memory guard: release large buffers after each stage.
-* Queue persistence: on app start, scan DB for entries in `transcribing`/`refining` and re-enqueue.
-
----
-
-## Privacy Notes
-
-* Only the **minimum** needed leaves the device: audio → STT, then text → refine.
-* All results are saved **encrypted** on-device; no third-party storage by default.
-* Errors should redact PII when logged.
-
----
-
-## Telemetry (optional)
-
-* `transcription.start/success/fail` (duration, bytes)
-* `refinement.start/success/fail` (tokens, duration)
-* backoff steps and final failure reasons
-
----
-
-## Pseudocode (Service Orchestrator)
-
-```ts
-async function process(entry: Entry) {
-  try {
-    if (entry.processingStage === 'transcribing') {
-      const rawText = await SpeechService.transcribeAudio({ audioUri: entry.audioUri, timeoutMs: t(entry) });
-      await Database.updateEntry(entry.id, { rawText, processingStage: 'refining' });
+1.  **Callback 2 (UI Update):** The service calls `onProgress(entryId, 'refining')`.
+      * Just like before, the provider updates the database stage.
+      * The UI re-renders to show "Refining text...".
+2.  **The Work:** The service calls `textService.refineTranscription(rawText)`.
+3.  **The "Editor" (`TextService.ts`):** This service sends the raw text back to the **Gemini API**, but with a much more complex prompt. This prompt instructs the AI to act as an "expert text processing specialist" and to:
+      * Generate a compelling **2-5 word title**.
+      * Clean up transcription errors and filler words ("um," "like").
+      * Maintain your **authentic voice** and personality.
+      * Structure the text with paragraph breaks.
+      * Return the result in a **clean JSON format**.
+4.  **The Result:** The API returns the final, polished product:
+    ```json
+    {
+      "title": "Reflecting on Growth",
+      "formattedText": "Today I reflected on my journey and realized how much I've grown. The challenges I faced last week taught me valuable lessons about resilience and patience."
     }
+    ```
 
-    if (entry.processingStage === 'refining') {
-      const { title, text } = await TextService.refineTranscription({ rawText: entry.rawText!, timeoutMs: t(entry) });
-      await Database.updateEntry(entry.id, { title, text, processingStage: 'completed' });
-    }
-  } catch (err) {
-    const stage = entry.processingStage === 'refining' ? 'refine_failed' : 'transcribe_failed';
-    await Database.updateEntry(entry.id, { processingStage: stage, lastErrorCode: code(err), lastErrorMessage: msg(err) });
-    throw err; // let the runner apply backoff/retry
-  }
-}
-```
+-----
 
----
+## 4\. The Journey's End: Saving and Display
 
-## Test Checklist
+The `TranscriptionService` has everything it needs.
 
-* New entry moves `transcribing → refining → completed` with correct DB updates.
-* Kill/relaunch app during each stage → job resumes.
-* Force a 401/timeout → reaches `*_failed` and shows retry.
-* Manual retry advances and completes.
-* `refine_failed` still renders `rawText` and allows usage.
-* Deleting a failed entry removes audio + row and updates the list.
+1.  **Callback 3 (The Final Handoff):** The service calls the `onComplete(entryId, result, 'completed')` callback, passing along the new title, refined text, and raw text.
+2.  **The Provider (`SecureJournalProvider.tsx`):** The provider catches this callback and calls `entryOps.updateEntryTranscription()`.
+3.  **The "Ledger" (`DatabaseService.ts`):** This operation updates your entry in the SQLite database—setting the final `title`, `text`, `rawText`, and `processingStage: 'completed'`.
+4.  **The Final Refresh:** The provider calls `loadState()` one last time. Your app's state is refreshed from the database, and the UI re-renders to show your fully completed, formatted, and titled journal entry.
+
+-----
+
+## 5\. What If It Fails? (Error Handling)
+
+The pipeline is designed to be resilient and to tell you what went wrong.
+
+### Scenario 1: Transcription Fails
+
+If `SpeechService` fails (e.g., the audio is silent or the API is down), the `onComplete` callback is called with `status: 'failed'`.
+
+  * The entry's stage is set to `transcribing_failed` in the database.
+  * When you open the entry, `EntryContent.tsx` sees this stage and shows a "Transcription Failed" message with a **"Try Again"** button.
+  * Pressing "Try Again" calls `retranscribeEntry`, which simply puts the job back in the queue to try again.
+
+### Scenario 2: Refinement Fails
+
+If `TextService` fails, *we still have the raw transcript*.
+
+  * The orchestrator calls `onComplete` but saves the *raw text* as the main text and sets the stage to `refining_failed`.
+  * `EntryContent.tsx` sees this, **displays the raw text** (so your thoughts aren't lost), and shows a "Refinement Failed" message with a **"Refine Text"** button.
+  * Pressing this button also re-queues the job, but this time it will skip Step 1 (Transcription) and go straight to Step 2 (Refinement).
+  
