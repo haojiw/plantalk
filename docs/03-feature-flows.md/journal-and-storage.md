@@ -1,188 +1,130 @@
-# Journal & Storage
+# Feature Flow: The Journal & Storage Journey
 
-Scope: CRUD entries, sectioned lists, item swipe/delete, local storage/backup.
+This document explains how your journal entries are loaded, displayed, managed, and securely stored. This flow is the backbone of the app, ensuring your data is fast, safe, and persistent.
 
-**Files**
+The journey covers two main parts:
 
-* `context/JournalProvider.tsx` (or `SecureJournalProvider.tsx`) — app‑wide source of truth; exposes CRUD and selectors.
-* `app/(tabs)/journal.tsx` — screen that renders the sectioned list.
-* `components/HistoryList.tsx` — sectioned FlatList wrapper + empty/loader states.
-* `components/EntryItem.tsx` — one row: title, time, duration, swipe actions.
-* `services/DatabaseService.ts` — SQLite access layer (queries, migrations, indices).
-* `services/BackupService.ts` — encrypted export/import (local/off‑device).
+1.  **The Read Flow:** How your entries get from the database to your screen.
+2.  **The Delete Flow:** What happens when you swipe to delete an entry.
+3.  **The "Vault":** How your data is physically and securely stored on the device.
 
----
+### High-Level Flow: Read & Delete
 
-## Data Model (Schema)
+```mermaid
+graph TD
+    subgraph Read Flow
+        A(App Start) --> B(SecureJournalProvider);
+        B --> C(loadStateOp);
+        C --> D[DatabaseService: getAppState];
+        D --> E[SELECT * FROM entries];
+        E --> F(Provider state.entries);
+        G(Journal Tab Mounts) --> H{useSecureJournal};
+        H --> F;
+        F --> I[HistoryList UI];
+        I --> J[EntryItem UI];
+    end
 
-### Table: `entries`
-
-| Field              | Type         | Notes                                |            |             |                     |                   |
-| ------------------ | ------------ | ------------------------------------ | ---------- | ----------- | ------------------- | ----------------- |
-| `id`               | TEXT (PK)    | `ulid()`/`uuid()`; sortable if ULID. |            |             |                     |                   |
-| `createdAt`        | INTEGER      | epoch ms; list sort key (DESC).      |            |             |                     |                   |
-| `updatedAt`        | INTEGER      | touch on any write.                  |            |             |                     |                   |
-| `durationMs`       | INTEGER      | audio length.                        |            |             |                     |                   |
-| `audioUri`         | TEXT         | absolute path to sealed `.m4a`.      |            |             |                     |                   |
-| `processingStage`  | TEXT         | `'transcribing'                      | 'refining' | 'completed' | 'transcribe_failed' | 'refine_failed'`. |
-| `title`            | TEXT NULL    | refined title.                       |            |             |                     |                   |
-| `text`             | TEXT NULL    | refined text.                        |            |             |                     |                   |
-| `rawText`          | TEXT NULL    | raw transcript (optional).           |            |             |                     |                   |
-| `tags`             | TEXT NULL    | comma‑ or JSON‑encoded (future).     |            |             |                     |                   |
-| `deletedAt`        | INTEGER NULL | soft‑delete tombstone (ms).          |            |             |                     |                   |
-| `lastErrorCode`    | TEXT NULL    | machine‑readable.                    |            |             |                     |                   |
-| `lastErrorMessage` | TEXT NULL    | human string.                        |            |             |                     |                   |
-
-**Indices**
-
-* `CREATE INDEX idx_entries_createdAt ON entries(createdAt DESC);`
-* `CREATE INDEX idx_entries_stage ON entries(processingStage);`
-* `CREATE INDEX idx_entries_deleted ON entries(deletedAt);` (for cleanup jobs)
-
-> If you use ULIDs for `id`, you can sort by `id` for near‑time order; keep `createdAt` as explicit truth.
-
----
-
-## Provider API (high‑level)
-
-```ts
-// context/JournalProvider.tsx
-export function useSecureJournal() {
-  return {
-    entries,               // memoized list (excluding soft‑deleted)
-    getEntryById(id),      // selector
-    addEntry(payload),     // create placeholder; kicks off pipeline
-    updateEntry(id, patch),
-    deleteEntry(id, opts), // soft or hard
-    restoreEntry(id),      // from trash
-    purgeTrash(olderThanMs)
-  };
-}
+    subgraph Delete Flow
+        K(Swipe EntryItem) --> L{onEntryDelete};
+        L --> M(Provider: deleteEntry);
+        M --> N(entryOperations.deleteEntry);
+        N --> O[Find Audio Path];
+        N --> P[Delete .m4a File];
+        N --> Q[DatabaseService: deleteEntry];
+        Q --> R[DELETE FROM entries];
+        R --> S(Provider: loadState);
+        S --> F;
+    end
 ```
 
-**Contract**
+-----
 
-* All writes are wrapped in a DB transaction; context state mirrors DB after commit.
-* Writes update `updatedAt` automatically.
+## 1\. The "Aha\!" Moment: Loading Your Journal
 
----
+When you first open the app, your journal appears to load instantly. This is by design, as all the heavy lifting happens the moment the app launches.
 
-## CRUD Flows
+1.  **App Start (`app/_layout.tsx`):** The moment your app launches, it wraps everything in the `SecureJournalProvider`.
+2.  **Provider Wakes Up (`SecureJournalProvider.tsx`):** On its first mount, the provider kicks off its initialization. It calls `initializeServices()` to open the **SQLite database** and then immediately calls `loadStateOp()` (from `stateLoader.ts`).
+3.  **The "Ledger" (`DatabaseService.ts`):** `loadStateOp()` calls `databaseService.getAppState()`. This service runs the SQL query `SELECT * FROM entries ORDER BY date DESC` against the `plantalk.db` file on your device.
+4.  **State is Hydrated:** The provider receives the full list of journal entries and stores them in its internal React state (`state.entries`).
+5.  **You Tap "Journal" (`app/(tabs)/journal.tsx`):** Now, when you tap the journal tab, the `JournalScreen` mounts. It calls `useSecureJournal()`, which *instantly* retrieves the `state.entries` array that was already loaded in step 4.
 
-### Create
+There's no loading spinner because, by the time you navigate to the screen, the data is already in memory, ready to be displayed.
 
-1. Recorder calls `addEntry({ audioUri, durationMs, createdAt })`.
-2. Provider inserts placeholder record with `processingStage: 'transcribing'`, empty text fields.
-3. Emits `onEntryCreated(id)`; TranscriptionService enqueues.
+-----
 
-### Read (Listing)
+## 2\. Making it Pretty: Rendering the List
 
-* `journal.tsx` subscribes to `entries` selector.
-* `HistoryList` groups by **Day** (Today, Yesterday, Earlier) using `createdAt`.
-* Each `EntryItem` shows: **title** (or fallback: date/time), **preview line** (`text` → `rawText`), **duration**, and a right chevron.
-* While processing, show badge: “Transcribing…” / “Refining…”. On failure, show small warning icon + label.
+Once `journal.tsx` has the list of entries, it doesn't just show them.
 
-### Update
+1.  **Grouping:** A `useMemo` hook in `journal.tsx` runs, sorting all your entries into human-friendly sections: "Today," "Yesterday," "Previous 7 Days," etc.
+2.  **The List UI (`HistoryList.tsx`):** This component takes the sectioned data and renders the list, creating a `<View>` for each section.
+3.  **The Row UI (`EntryItem.tsx`):** `HistoryList` renders an `EntryItem` for each entry in a section. This component is responsible for displaying the title, text preview, and duration. It's also the component that handles the swipe-to-delete gesture.
 
-* Edits (future) will patch `title`, `text`, `tags`. For v1, updates are system‑driven (pipeline).
-* Provider merges patches, writes DB, and revalidates list memo.
+-----
 
-### Delete
+## 3\. The "Swipe-to-Delete" Action
 
-* **Swipe left** on an item → actions: **Delete** (soft), **More…**.
-* Soft delete sets `deletedAt = now` and removes the row from the live list.
-* Snackbar: “Entry moved to Trash. Undo?” → calls `restoreEntry(id)` (clears `deletedAt`).
-* **Hard delete** occurs via cleanup (Trash screen or `purgeTrash`) and must remove:
+When you swipe left on an entry, you are interacting directly with `EntryItem.tsx`.
 
-  * DB row
-  * audio file at `audioUri`
-  * any auxiliary blobs (backup temp files)
+1.  **The Gesture:** `EntryItem.tsx` uses `react-native-gesture-handler` to track your finger's movement.
+2.  **The "Delete" Tap:** When you tap the red "Delete" button that appears, the `handleDeletePress()` function is called inside the `EntryItem`.
+3.  **The Callback:** This function calls the `onEntryDelete(item.id)` prop, which was passed down from `journal.tsx`.
+4.  **The Handoff:** `journal.tsx` receives this call and executes the main function from the provider: `deleteEntry(entryId)`.
 
-> If the entry is mid‑processing, cancel/ignore the in‑flight job before hard delete.
+-----
 
----
+## 4\. The "Core" Logic: Deleting an Entry
 
-## Sectioning & Grouping
+This is where your app's architecture ensures no data is left behind. The `SecureJournalProvider` delegates the complex work to `entryOperations.ts`.
 
-**Grouping algorithm (journal.tsx)**
+The `entryOperations.deleteEntry` function performs two critical, separate actions in order:
 
-* Bucket by calendar day in the user’s timezone.
-* Section headers: `Today`, `Yesterday`, `MMM d, yyyy` for older.
-* Within each section, sort by `createdAt DESC`.
+1.  **Delete the Audio File:**
 
-**Empty states**
+      * It first reads the entry from the database to get its `audioUri` (e.g., `audio/audio_123.m4a`).
+      * It passes this **relative path** to `getAbsoluteAudioPath()` (from `shared/utils/audioPath.ts`).
+      * This utility constructs the full, **absolute path** (e.g., `file:///var/mobile/.../Documents/audio/audio_123.m4a`).
+      * It then uses `FileSystem.deleteAsync()` to permanently delete the `.m4a` file from your device's storage.
 
-* No entries → friendly prompt with a **Record** button.
-* All entries processing → list shows placeholders with skeletons.
+2.  **Delete the Database Row:**
 
----
+      * After the file is gone, it calls `databaseService.deleteEntry(entryId)`.
+      * `DatabaseService.ts` executes the SQL command: `DELETE FROM entries WHERE entryId = ?`.
 
-## Storage Layer (SQLite + Encryption)
+Once the operation is complete, the `deleteEntry` function in the provider calls `loadState()` again. This re-queries the database, gets the new (shorter) list of entries, updates the provider's state, and React automatically removes the item from your screen.
 
-* All content persisted in local SQLite file.
-* Encrypt at rest (AES‑256); key stored in OS keychain/secure storage.
-* Audio lives as files; DB stores `audioUri` and metadata.
-* Writes use transactions; failures roll back.
-* On app start, run lightweight **integrity check** and **pending job scan** (re‑enqueue any `transcribing/refining`).
+-----
 
-**Migrations**
+## 5\. The "Vault": How Storage *Actually* Works
 
-* Keep a `schemaVersion` table; apply ordered migrations on upgrade.
-* Backfill new columns with safe defaults (e.g., `processingStage='completed'` for legacy rows).
+Your journal data isn't just one big file. It's a robust system of three distinct parts that work together.
 
----
+### The Ledger: `DatabaseService.ts`
 
-## Backup & Restore
+This service controls your **SQLite database** (`plantalk.db`). This file is the "ledger" or "index" for your entire journal. It stores all the metadata:
 
-**BackupService**
+  * `id`, `date`, `title`
+  * The `text` (refined transcription) and `rawText`
+  * `processingStage` (e.g., 'completed')
+  * `audioUri` (The **relative path** to the audio file)
 
-* **Export**: serialize rows + copy audio files → package into an **encrypted archive** (include schemaVersion + createdAt).
-* **Import**: verify archive → decrypt → insert rows (upsert by `id`) → copy audio files → rebuild indices.
-* Never transmit backups off‑device unless the user explicitly chooses a destination.
+### The Keymaker: `SecureStorageService.ts`
 
-**Versioning**
+This service *does not* store your journal entries. It manages your app's most sensitive secrets by storing them in the device's hardware-backed secure enclave:
 
-* Include app version + schemaVersion in the archive; refuse restore if newer major schema and `--force` not passed.
+  * **iOS:** Keychain
+  * **Android:** Keystore / EncryptedSharedPreferences
 
-**Privacy**
+It holds things like the `migration_completed` flag and, in the future, could hold the encryption key for the database itself.
 
-* Backups are encrypted with a key derived from a user secret; never store raw archives.
+### The Vault: The File System
 
----
+This is the physical `Documents/` directory in your app's sandboxed storage. Your large `.m4a` audio files live here, inside an `audio/` sub-folder. The `DatabaseService` only stores the *name* of the file (the relative path); the File System stores the *file itself*.
 
-## Error Handling
+This separation is what makes your app so robust:
 
-| Where       | Example            | User Feedback                                | Dev Notes                            |
-| ----------- | ------------------ | -------------------------------------------- | ------------------------------------ |
-| DB insert   | disk full          | “Not enough storage to save.”                | retry after cleanup; keep temp audio |
-| DB read     | corrupted row      | auto‑repair if possible; otherwise hide item | log + mark for migration fix         |
-| Hard delete | file unlink fails  | “Removed from list; file cleanup pending.”   | schedule cleanup job                 |
-| Backup      | bad key / tampered | “Backup couldn’t be opened.”                 | verify signature; no partial restore |
-
----
-
-## Selectors & Performance
-
-* Keep `entries` memoized; derive light shapes for list (id, title, preview, createdAt, badges).
-* Use `FlashList`/`SectionList` with `getItemLayout` to avoid jank.
-* Lazy‑load long `text` bodies on entry screen; store a short excerpt for list preview.
-
----
-
-## Telemetry (optional)
-
-* `entry.create/delete/restore`
-* list render counts and time
-* backup export/import duration and size
-
----
-
-## Test Checklist
-
-* Create → item appears under **Today** with Processing badge, sorts correctly.
-* Kill/relaunch app → list rehydrates fast; processing resumes.
-* Swipe delete → item leaves list; **Undo** restores.
-* Hard delete removes DB row **and** audio file.
-* Disk‑full path shows error and preserves temp audio.
-* Backup export/import round‑trips a small dataset.
-* Migration from an older schema succeeds with correct defaults.
+  * **Fast:** Loading the journal only requires reading the lightweight SQLite database, not all the audio files.
+  * **Safe:** By storing **relative paths** (thanks to `audioPath.ts`), the app can always find your audio files, even if an iOS update moves the app's physical storage location.
+  * **Secure:** Sensitive data lives in the database, while secrets live in the device's keychain.
+  

@@ -127,3 +127,4 @@ const { state, addEntry, deleteEntry, ... } = useSecureJournal();
 - **Provider reduction**: 81% (937 → 177 lines)
 - **Average module size**: ~126 lines (highly focused)
 
+
