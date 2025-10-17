@@ -1,3 +1,4 @@
+import { useKeepAwake } from 'expo-keep-awake';
 import { useSecureJournal } from '@/core/providers/journal';
 import {
     AudioModule,
@@ -26,6 +27,8 @@ export interface UseRecorderReturn {
 }
 
 export const useRecorder = (): UseRecorderReturn => {
+  useKeepAwake(); // Keep screen awake during recording
+
   const [recordingState, setRecordingState] = useState<RecordingState>('recording');
   const [duration, setDuration] = useState(0);
   const [hasPermission, setHasPermission] = useState(false);
