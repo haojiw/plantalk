@@ -39,3 +39,4 @@ To help you build a consistent practice, Plantalk includes a virtual plant compa
 ## Project Status
 
 The app is currently available for testing via **TestFlight**. The core functionality of recording, transcribing, and viewing entries is complete. The next focus is on implementing the AI insights feature and preparing for an official App Store launch.
+b
