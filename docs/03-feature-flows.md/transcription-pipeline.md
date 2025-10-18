@@ -12,7 +12,7 @@ graph TD
     B --> C(transcriptionService.addToQueue);
     
     subgraph "TranscriptionService (The Project Manager)"
-        C --> D{Process Queue (1 at a time)};
+        C --> D{"Process Queue (1 at a time)"};
         D --> E(onProgress: 'transcribing');
         E --> F[SpeechService: transcribeAudio];
         F --> G(Gemini API - Speech);
@@ -27,14 +27,14 @@ graph TD
     subgraph "Provider & UI (The Feedback Loop)"
         E --> P1(Provider: updateEntryProgress);
         P1 --> P2(DB: stage = 'transcribing');
-        P2 --> P3(UI: "Transcribing audio...");
+        P2 --> P3("UI: ""Transcribing audio...""");
 
         I --> P4(Provider: updateEntryProgress);
         P4 --> P5(DB: stage = 'refining');
-        P5 --> P6(UI: "Refining text...");
+        P5 --> P6("UI: ""Refining text...""");
 
         M --> P7(Provider: updateEntryTranscription);
-        P7 --> P8(DB: stage = 'completed' + save text);
+        P7 --> P8("DB: stage = 'completed' + save text");
         P8 --> P9(UI: Show final entry);
     end
     
