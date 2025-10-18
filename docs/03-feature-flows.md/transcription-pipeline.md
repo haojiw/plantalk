@@ -11,7 +11,7 @@ graph TD
     A(Recording Flow Ends) --> B(entryOperations.addEntry);
     B --> C(transcriptionService.addToQueue);
     
-    subgraph TranscriptionService (The Project Manager)
+    subgraph "TranscriptionService (The Project Manager)"
         C --> D{Process Queue (1 at a time)};
         D --> E(onProgress: 'transcribing');
         E --> F[SpeechService: transcribeAudio];
@@ -24,7 +24,7 @@ graph TD
         L --> M(onComplete: 'completed');
     end
 
-    subgraph Provider & UI (The Feedback Loop)
+    subgraph "Provider & UI (The Feedback Loop)"
         E --> P1(Provider: updateEntryProgress);
         P1 --> P2(DB: stage = 'transcribing');
         P2 --> P3(UI: "Transcribing audio...");
