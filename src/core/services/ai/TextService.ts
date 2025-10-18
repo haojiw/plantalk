@@ -138,13 +138,17 @@ Return your response in this exact JSON format:
         timeoutMs // dynamic timeout
       );
 
-      console.log(`[TextService] Gemini API response received`);
+      // Safely access the response text
+      const candidate = data.candidates?.[0];
+      const responseText = candidate?.content?.parts?.[0]?.text;
 
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error('No response from Gemini API');
+      if (!responseText) {
+        const finishReason = candidate?.finishReason; //log the reason if available
+        console.error(`[TextService] Refinement failed. No text found in response. Finish Reason: ${finishReason || 'Unknown'}`);
+        console.error('[TextService] Full candidate:', JSON.stringify(candidate, null, 2));
+        throw new Error(`Refinement failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`);
       }
 
-      const responseText = data.candidates[0].content.parts[0].text;
       console.log(`[TextService] Response text length: ${responseText.length}`);
       
       // Parse the JSON response
