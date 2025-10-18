@@ -33,7 +33,7 @@ interface RefinedTranscription {
 async function fetchWithTimeout(
   resource: RequestInfo,
   options: RequestInit = {},
-  timeout = 30000
+  timeout = 30000 // 30 seconds default
 ) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -122,6 +122,10 @@ Return your response in this exact JSON format:
 
       console.log(`[TextService] Sending request to Gemini API...`);
 
+      let timeoutMs = 30000 + Math.floor(rawText.length / 250) * 1000; // 30 seconds + 1 second per 250 chars
+      timeoutMs = Math.min(timeoutMs, 180000); // Cap at 3 minutes
+      console.log(`[TextService] Using timeout: ${timeoutMs}ms for text length: ${rawText.length}`);
+
       const data = await fetchWithTimeout(
         this.baseUrl,
         {
@@ -131,7 +135,7 @@ Return your response in this exact JSON format:
           },
           body: JSON.stringify(requestBody),
         },
-        30000 // 30 second timeout
+        timeoutMs // dynamic timeout
       );
 
       console.log(`[TextService] Gemini API response received`);
