@@ -144,6 +144,7 @@ class SpeechService {
           temperature: 0.1, // Lower temperature for more accurate transcription
           topK: 40,
           topP: 0.95,
+          maxOutputTokens: 8192, // Longer transcriptions
         }
       };
 
