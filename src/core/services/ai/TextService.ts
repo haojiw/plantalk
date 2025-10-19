@@ -124,7 +124,7 @@ Return your response in this exact JSON format:
 
       let timeoutMs = 30000 + Math.floor(rawText.length / 250) * 1000; // 30 seconds + 1 second per 250 chars
       timeoutMs = Math.min(timeoutMs, 180000); // Cap at 3 minutes
-      console.log(`[TextService] Using timeout: ${timeoutMs}ms for text length: ${rawText.length}`);
+      console.log(`[TextService] Using refine timeout: ${timeoutMs}ms for text length: ${rawText.length}`);
 
       const data = await fetchWithTimeout(
         this.baseUrl,
@@ -138,15 +138,27 @@ Return your response in this exact JSON format:
         timeoutMs // dynamic timeout
       );
 
-      // Safely access the response text
       const candidate = data.candidates?.[0];
-      const responseText = candidate?.content?.parts?.[0]?.text;
+      const finishReason = candidate?.finishReason;
+      
+      //BEGIN 3 SAFETY CHECKS
+      if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') { //check this, do not want app to tweak out if explicit content, alr check in SpeechService but to double check
+        console.log('[TextService] Content flagged by safety filter. Returning a placeholder message.');
 
-      if (!responseText) {
+        return {
+          title: 'Content Moderated',
+          formattedText: 'This content could not be processed due to safety guidelines.'
+        };
+      }
+      //FIRST 2 SAFETY CHECKS DONE
+
+      const responseText = candidate?.content?.parts?.[0]?.text; 
+
+      if (!responseText) { //now handle other errors like if we hit MAX_TOKENS
         const finishReason = candidate?.finishReason; //log the reason if available
         console.error(`[TextService] Refinement failed. No text found in response. Finish Reason: ${finishReason || 'Unknown'}`);
-        console.error('[TextService] Full candidate:', JSON.stringify(candidate, null, 2));
-        throw new Error(`Refinement failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`);
+        console.error('[TextService] Full candidate:', JSON.stringify(candidate, null, 2)); //see full candidate for debugging
+        throw new Error(`Refinement failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`); //stop current task
       }
 
       console.log(`[TextService] Response text length: ${responseText.length}`);
@@ -165,6 +177,14 @@ Return your response in this exact JSON format:
         
         console.log(`[TextService] Cleaned response for parsing:`, cleanedResponse);
         
+        if (!cleanedResponse.startsWith('{')) { //LAST SAFETY CHECK
+          console.warn('[TextService] Response was not JSON, treating as a safety block.');
+          return {
+            title: 'Content Moderated',
+            formattedText: 'This content could not be processed due to safety guidelines.'
+          };
+        }
+
         const parsed = JSON.parse(cleanedResponse);
         
         if (!parsed.title || !parsed.formattedText) {
