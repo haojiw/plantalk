@@ -116,7 +116,7 @@ Return your response in this exact JSON format:
           temperature: 0.2, // Optimized for Gemini 2.5's improved consistency
           topK: 32, // Fine-tuned for better text processing
           topP: 0.9, // Balanced creativity and accuracy for text cleanup
-          maxOutputTokens: 4096, // Sufficient for longer text processing
+          maxOutputTokens: 8192, // Sufficient for longer text processing
         }
       };
 
