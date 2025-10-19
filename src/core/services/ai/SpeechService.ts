@@ -206,6 +206,7 @@ class SpeechService {
       }
 
       console.log(`[SpeechService] Transcription successful, length: ${transcriptionText.length}`);
+      console.log(`[SpeechService] Transcription: ${transcriptionText.trim()}`);
       return transcriptionText.trim();
       
     } catch (error) {
