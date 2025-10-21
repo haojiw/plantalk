@@ -25,7 +25,7 @@ interface GeminiResponse {
 }
 
 interface RefinedTranscription {
-  title: string;
+  title?: string;
   formattedText: string;
 }
 
@@ -65,7 +65,7 @@ class TextService {
     }
   }
 
-  async refineTranscription(rawText: string): Promise<RefinedTranscription> {
+  async refineTranscription(rawText: string, isFirstChunk: boolean = true): Promise<RefinedTranscription> { //set true by default for first chunk
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
     }
@@ -74,32 +74,53 @@ class TextService {
       throw new Error('No text provided for refinement');
     }
 
-    console.log(`[TextService] Starting text refinement, length: ${rawText.length}`);
+    console.log(`[TextService] Starting text refinement (first chunk: ${isFirstChunk}), length: ${rawText.length}`);
 
-    const prompt = `You are an expert text processing specialist using advanced AI capabilities to refine voice transcriptions with precision and care.
+    let prompt: string = '';
 
-CORE OBJECTIVES:
-1. Generate a compelling 2-5 word title that captures the essence of the content
-2. Clean transcription errors: misheard words, punctuation gaps, excessive filler words ("um", "uh", "like")
-3. Maintain the speaker's authentic voice, personality, and emotional tone
-4. Structure longer content with natural paragraph breaks and logical flow
-5. Add meaningful subheadings only when they genuinely enhance readability
+    if (isFirstChunk) {
+      prompt = `You are an expert text processing specialist...
+        CORE OBJECTIVES:
+        1. Generate a compelling 2-5 word title...
+        2. Clean transcription errors...
+        3. Maintain authentic voice...
+        4. Structure content...
+        5. Add subheadings if needed...
+        QUALITY STANDARDS:
+        - Apply MINIMAL changes...
+        - Maintain original language...
+        - Keep personal expressions...
+        - Ensure readability...
+        - Fix obvious errors...
 
-QUALITY STANDARDS:
-- Apply MINIMAL changes - preserve original meaning and style
-- Maintain original language - no translation whatsoever
-- Keep personal expressions, colloquialisms, and unique phrasing intact
-- Ensure readability while respecting the speaker's natural speech patterns
-- Fix obvious transcription errors without over-editing
+        Original transcription:
+        "${rawText}"
 
-Original transcription:
-"${rawText}"
+        Return your response in this exact JSON format:
+        {
+          "title": "Meaningful title in original language",
+          "formattedText": "Enhanced text with proper structure and minimal corrections"
+        }`;
+    } else {
+      // Prompt for subsequent chunks (no title, no JSON)
+      prompt = `You are an expert text processor refining part of a longer voice transcription.
+        CORE OBJECTIVES:
+        1. Clean transcription errors: misheard words, punctuation gaps, excessive filler words ("um", "uh", "like").
+        2. Maintain the speaker's authentic voice, personality, and emotional tone.
+        3. Structure the content with natural paragraph breaks.
+        4. Add subheadings if appropriate to enhance readability.
+        QUALITY STANDARDS:
+        - Apply MINIMAL changes to preserve original meaning and style.
+        - Maintain original language.
+        - Keep personal expressions intact.
+        - Ensure readability while respecting natural speech patterns.
+        - Fix obvious transcription errors without over-editing.
 
-Return your response in this exact JSON format:
-{
-  "title": "Meaningful title in original language",
-  "formattedText": "Enhanced text with proper structure and minimal corrections"
-}`;
+        Original transcription chunk:
+        "${rawText}"
+        
+        **Return ONLY the cleaned-up text.** Do NOT use JSON.`;
+    }
 
     try {
       const requestBody: GeminiRequest = {
@@ -146,7 +167,6 @@ Return your response in this exact JSON format:
         console.log('[TextService] Content flagged by safety filter. Returning a placeholder message.');
 
         return {
-          title: 'Content Moderated',
           formattedText: 'This content could not be processed due to safety guidelines.'
         };
       }
@@ -164,70 +184,80 @@ Return your response in this exact JSON format:
       console.log(`[TextService] Response text length: ${responseText.length}`);
       
       // Parse the JSON response
-      try {
-        // Handle responses wrapped in markdown code blocks
-        let cleanedResponse = responseText.trim();
-        
-        // Remove markdown code block formatting if present
-        if (cleanedResponse.startsWith('```json')) {
-          cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-        } else if (cleanedResponse.startsWith('```')) {
-          cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
-        }
-        
-        console.log(`[TextService] Cleaned response for parsing:`, cleanedResponse);
-        
-        if (!cleanedResponse.startsWith('{')) { //LAST SAFETY CHECK
-          console.warn('[TextService] Response was not JSON, treating as a safety block.');
-          return {
-            title: 'Content Moderated',
-            formattedText: 'This content could not be processed due to safety guidelines.'
-          };
-        }
-
-        const parsed = JSON.parse(cleanedResponse);
-        
-        if (!parsed.title || !parsed.formattedText) {
-          throw new Error('Invalid response format from Gemini');
-        }
-
-        console.log(`[TextService] Refinement successful, title: "${parsed.title}"`);
-        return {
-          title: parsed.title.trim(),
-          formattedText: parsed.formattedText.trim()
-        };
-      } catch (parseError) {
-        console.error('Error parsing Gemini response:', parseError);
-        console.error('Raw response:', responseText);
-        
-        // Fallback: try to extract title and text manually using more robust regex
-        // First try to extract from markdown-wrapped JSON
-        let textToMatch = responseText;
-        if (responseText.includes('```json')) {
-          const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-          if (jsonMatch) {
-            textToMatch = jsonMatch[1];
+      if (isFirstChunk) {
+        try {
+          // Handle responses wrapped in markdown code blocks
+          let cleanedResponse = responseText.trim();
+          
+          // Remove markdown code block formatting if present
+          if (cleanedResponse.startsWith('```json')) {
+            cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (cleanedResponse.startsWith('```')) {
+            cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
           }
-        }
-        
-        const titleMatch = textToMatch.match(/"title":\s*"([^"]+)"/);
-        const textMatch = textToMatch.match(/"formattedText":\s*"((?:[^"\\]|\\.)*)"/);
-        
-        if (titleMatch && textMatch) {
-          console.log(`[TextService] Fallback parsing successful`);
+          
+          console.log(`[TextService] Cleaned response for parsing:`, cleanedResponse);
+          
+          if (!cleanedResponse.startsWith('{')) {
+            console.warn('[TextService] Response (first chunk) not JSON. Treating as safety block.');
+            return {
+              title: 'Content Moderated',
+              formattedText: 'This content could not be processed due to safety guidelines.'
+            };
+          }
+
+          const parsed = JSON.parse(cleanedResponse);
+          
+          if (!parsed.title || !parsed.formattedText) {
+            throw new Error('Invalid response format from Gemini (first chunk)');
+          }
+
+          console.log(`[TextService] First chunk refinement successful, title: "${parsed.title}"`);
           return {
-            title: titleMatch[1].trim(),
-            formattedText: textMatch[1].replace(/\\"/g, '"').trim()
+            title: parsed.title.trim(),
+            formattedText: parsed.formattedText.trim()
+          };
+
+        } catch (parseError) {
+          console.error('Error parsing Gemini response:', parseError);
+          console.error('Raw response:', responseText);
+          
+          // Fallback: try to extract title and text manually using more robust regex
+          // First try to extract from markdown-wrapped JSON
+          let textToMatch = responseText;
+          if (responseText.includes('```json')) {
+            const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              textToMatch = jsonMatch[1];
+            }
+          }
+        
+          const titleMatch = textToMatch.match(/"title":\s*"([^"]+)"/);
+          const textMatch = textToMatch.match(/"formattedText":\s*"((?:[^"\\]|\\.)*)"/);
+          
+          if (titleMatch && textMatch) {
+            console.log(`[TextService] Fallback parsing successful`);
+            return {
+              title: titleMatch[1].trim(),
+              formattedText: textMatch[1].replace(/\\"/g, '"').trim()
+            };
+          }
+          
+          // Last resort fallback
+          console.warn(`[TextService] Using fallback refinement`);
+          return {
+            title: `Journal Entry - ${new Date().toLocaleDateString()}`,
+            formattedText: rawText // Return original text if parsing fails
           };
         }
-        
-        // Last resort fallback
-        console.warn(`[TextService] Using fallback refinement`);
-        return {
-          title: `Journal Entry - ${new Date().toLocaleDateString()}`,
-          formattedText: rawText // Return original text if parsing fails
+      } else { //treat subsequent chunks as plain text
+        let cleanedResponse = responseText.trim();
+        console.log(`[TextService] Subsequent chunk refinement successful.`);
+        return { 
+          formattedText: cleanedResponse 
         };
       }
+
     } catch (error) {
       console.error('Error refining transcription with Gemini:', error);
       throw error;
