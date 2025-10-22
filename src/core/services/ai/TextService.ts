@@ -119,7 +119,10 @@ class TextService {
         Original transcription chunk:
         "${rawText}"
         
-        **Return ONLY the cleaned-up text.** Do NOT use JSON.`;
+        Return your response in this exact JSON format:
+        {
+          "formattedText": "Enhanced text with proper structure and minimal corrections"
+        }`;
     }
 
     try {
@@ -251,11 +254,46 @@ class TextService {
           };
         }
       } else { //treat subsequent chunks as plain text
-        let cleanedResponse = responseText.trim();
-        console.log(`[TextService] Subsequent chunk refinement successful.`);
-        return { 
-          formattedText: cleanedResponse 
-        };
+        try {
+          let cleanedResponse = responseText.trim();
+
+          if (cleanedResponse.startsWith('```json')) {
+            cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (cleanedResponse.startsWith('```')){
+            cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+          }
+
+          console.log(`[TextService] Cleaned response for parsing (subsequent chunk):`, cleanedResponse);
+
+          if (!cleanedResponse.startsWith('{')) {
+            console.warn('[TextService] Response (subsequent chunk) not JSON. Treating as safety block.');
+            return {
+              formattedText: 'This content could not be processed due to safety guidelines.' 
+            };
+          }
+
+          const parsed = JSON.parse(cleanedResponse);
+
+          // Check specifically for formattedText, title is not expected
+          if (!parsed.formattedText) {
+            throw new Error('Invalid response format from Gemini (subsequent chunk)');
+          }
+
+          console.log(`[TextService] Subsequent chunk refinement successful.`);
+          return {
+            formattedText: parsed.formattedText.trim()
+          };
+
+        } catch (parseError) {
+          console.error('Error parsing Gemini response (subsequent chunk):', parseError);
+          console.error('Raw response (subsequent chunk):', responseText);
+          
+          // Fallback for subsequent chunks: Use the raw text for this chunk
+          console.warn(`[TextService] Using fallback refinement (subsequent chunk)`);
+          return {
+            formattedText: rawText // Return original chunk text if parsing fails
+          };
+        }
       }
 
     } catch (error) {
