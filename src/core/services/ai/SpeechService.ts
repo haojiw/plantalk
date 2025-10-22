@@ -144,6 +144,7 @@ class SpeechService {
           temperature: 0.1, // Lower temperature for more accurate transcription
           topK: 40,
           topP: 0.95,
+          maxOutputTokens: 8192, // Longer transcriptions
         }
       };
 
@@ -180,18 +181,34 @@ class SpeechService {
 
       console.log(`[SpeechService] Gemini API response received`);
 
+      //FIRST SAFETY CHECK
       if (!data.candidates || data.candidates.length === 0) {
-        throw new Error('No response from Gemini API');
+        console.warn('[SpeechService] Received a response with no candidates. This is likely a safety block.');
+        // Return the placeholder message so the app doesn't crash
+        return 'Transcription could not be generated due to safety guidelines.';
       }
 
-      const transcriptionText = data.candidates[0].content.parts[0].text;
-      
-      if (transcriptionText) {
-        console.log(`[SpeechService] Transcription successful, length: ${transcriptionText.length}`);
-        return transcriptionText.trim();
+      const candidate = data.candidates?.[0];
+      const finishReason = candidate?.finishReason;
+
+      //SECOND AND THIRD SAFETY CHECKS
+      if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') {
+        console.warn('[SpeechService] Audio content flagged by safety filter. Returning a placeholder message.');
+        return 'Transcription could not be generated due to safety guidelines.';
       }
+
+      const transcriptionText = candidate?.content?.parts?.[0]?.text; //handle other reasons like maxtokens 
+
+      if (!transcriptionText) {
+        console.error(`[SpeechService] Transcription failed. No text found in response. Finish Reason: ${finishReason || 'Unknown'}`);
+        console.error('[SpeechService] Full candidate:', JSON.stringify(candidate, null, 2));
+        throw new Error(`Transcription failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`);
+      }
+
+      console.log(`[SpeechService] Transcription successful, length: ${transcriptionText.length}`);
+      console.log(`[SpeechService] Transcription: ${transcriptionText.trim()}`);
+      return transcriptionText.trim();
       
-      throw new Error('Transcription failed: No text in Gemini response');
     } catch (error) {
       console.error('Error transcribing audio with Gemini:', error);
       

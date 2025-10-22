@@ -17,6 +17,32 @@ interface TranscriptionResult {
   processingStage?: 'transcribing' | 'refining' | 'transcribing_failed' | 'refining_failed' | 'completed';
 }
 
+function chunkText(text: string, chunkSizeInWords: number = 1000): string[] { //split into chunkSizeInWords number of words
+  const words = text.split(/(\s+)/).filter(w => w.trim().length > 0);
+  const chunks: string[] = [];
+  if (words.length === 0) return [];
+
+  let currentChunk: string[] = [];
+  let currentWordCount = 0;
+
+  for (const word of words) {
+    currentChunk.push(word);
+    currentWordCount++;
+
+    if (currentWordCount >= chunkSizeInWords) {
+      chunks.push(currentChunk.join(' '));
+      currentChunk = [];
+      currentWordCount = 0;
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk.join(' '));
+  }
+
+  return chunks;
+}
+
 class TranscriptionService {
   private queue: TranscriptionTask[] = [];
   private isProcessing = false;
@@ -49,6 +75,8 @@ class TranscriptionService {
 
   // Process a single transcription task through the complete pipeline
   private async processTranscriptionTask(task: TranscriptionTask): Promise<void> {
+    let rawTranscription: string = '';
+
     try {
       console.log(`[TranscriptionService] Starting processing for entry ${task.entryId}`);
       
@@ -56,7 +84,6 @@ class TranscriptionService {
       task.onProgress(task.entryId, 'transcribing');
       console.log(`[TranscriptionService] Starting Gemini transcription...`);
       
-      let rawTranscription: string;
       try {
         rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
         console.log(`[TranscriptionService] Gemini completed. Raw text length: ${rawTranscription.length}`);
@@ -80,45 +107,61 @@ class TranscriptionService {
       // Step 2: Refine with Gemini text service
       task.onProgress(task.entryId, 'refining');
       console.log(`[TranscriptionService] Starting text refinement...`);
+
+      const chunks = chunkText(rawTranscription);
+      console.log(`[TranscriptionService] Processing ${chunks.length} chunks...`);
       
-      try {
-        const refined = await textService.refineTranscription(rawTranscription);
-        console.log(`[TranscriptionService] Text refinement completed. Title: "${refined.title}"`);
-
-        // Step 3: Return complete result
-        const result: TranscriptionResult = {
-          rawTranscription: rawTranscription,
-          refinedTranscription: refined.formattedText,
-          aiGeneratedTitle: refined.title,
-          processingStage: 'completed'
-        };
-
-        console.log(`[TranscriptionService] Processing completed successfully for entry ${task.entryId}`);
-        task.onComplete(task.entryId, result, 'completed');
-      } catch (refinementError) {
-        console.error(`[TranscriptionService] Text refinement failed:`, refinementError);
+      const refinedChunks: string[] = [];
+      let finalTitle = `Entry - ${new Date().toLocaleDateString()}`; //default title placeholder
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const isFirst = (i === 0);
+        console.log(`[TranscriptionService] Refining chunk ${i + 1} of ${chunks.length} (isFirst: ${isFirst})...`);
         
-        // Handle refinement-specific failure - we still have the raw transcription
-        task.onComplete(task.entryId, {
-          rawTranscription: rawTranscription,
-          refinedTranscription: rawTranscription, // Use raw text as fallback
-          aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-          processingStage: 'refining_failed'
-        }, 'completed'); // Still mark as completed since we have usable text
+        const result = await textService.refineTranscription(chunks[i], isFirst);
+
+        //capture title if first chunk
+        if (isFirst && result.title) {
+          finalTitle = result.title;
+          console.log(`[TranscriptionService] Title captured: "${finalTitle}"`);
+        }
+        
+        // Always add the refined text to our array
+        refinedChunks.push(result.formattedText);
+        console.log(`[TranscriptionService] Chunk ${i + 1} refinement complete.`);
       }
 
+      // Join the refined chunks with double newlines for paragraph spacing
+      const finalRefinedText = refinedChunks.join('\n\n');
+      console.log(`[TranscriptionService] All chunks processed. Final text length: ${finalRefinedText.length}`);
+
+      // Step 3: Return the complete, assembled result
+      const finalResult: TranscriptionResult = {
+        rawTranscription: rawTranscription,
+        refinedTranscription: finalRefinedText,
+        aiGeneratedTitle: finalTitle,
+        processingStage: 'completed'
+      };
+
+      console.log(`[TranscriptionService] Processing completed successfully for entry ${task.entryId}`);
+      task.onComplete(task.entryId, finalResult, 'completed');
+
     } catch (error) {
-      console.error(`[TranscriptionService] Unexpected error processing entry ${task.entryId}:`, error);
+      console.error(`[TranscriptionService] Unexpected error during processing for entry ${task.entryId}:`, error);
       
-      // Handle unexpected errors
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
+      // Determine if the failure happened during transcription or refinement
+      const stageFailed = rawTranscription ? 'refining_failed' : 'transcribing_failed';
+      const fallbackText = stageFailed === 'refining_failed' 
+        ? rawTranscription // If refinement fails, we still have the raw text
+        : `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+
+      //moved reuse here
       task.onComplete(task.entryId, {
-        rawTranscription: '',
-        refinedTranscription: `Processing failed: ${errorMessage}. Please try again.`,
+        rawTranscription: rawTranscription, // Will be empty if transcription failed
+        refinedTranscription: fallbackText, // Use raw text or an error message as a fallback
         aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-        processingStage: 'transcribing_failed'
-      }, 'failed');
+        processingStage: stageFailed
+      }, stageFailed === 'transcribing_failed' ? 'failed' : 'completed'); // Mark 'completed' if we have usable text
     }
   }
 
