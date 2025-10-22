@@ -156,7 +156,7 @@ class SpeechService {
           timeoutMs = 60000; // 60 seconds
         } else {
           // For longer audio, use (duration / 30) seconds timeout (more generous than OpenAI)
-          timeoutMs = Math.round((audioDurationSeconds / 30) * 1000);
+          timeoutMs = Math.round((audioDurationSeconds / 60) * 10000);
           timeoutMs = Math.max(timeoutMs, 60000); // Minimum 60 seconds
           timeoutMs = Math.min(timeoutMs, 300000); // Maximum 5 minutes
         }
