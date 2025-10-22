@@ -151,13 +151,14 @@ class SpeechService {
       // Gemini represents each second of audio as 32 tokens, so longer audio needs more time
       let timeoutMs = 60000; // Default 60 seconds
       if (audioDurationSeconds) {
-        if (audioDurationSeconds < 360) { // Less than 6 minutes
+        if (audioDurationSeconds < 180) { // Less than 3 minutes
           timeoutMs = 60000; // 60 seconds
         } else {
-          // For longer audio, use (duration / 30) seconds timeout (more generous than OpenAI)
-          timeoutMs = Math.round((audioDurationSeconds / 30) * 1000);
+          const audioDurationMinutes = audioDurationSeconds / 60;
+          // for every 1 minute, add 20 seconds to the timeout 
+          timeoutMs = audioDurationMinutes * 20000;
           timeoutMs = Math.max(timeoutMs, 60000); // Minimum 60 seconds
-          timeoutMs = Math.min(timeoutMs, 300000); // Maximum 5 minutes
+          timeoutMs = Math.min(timeoutMs, 600000); // Maximum 10 minutes
         }
         console.log(`[SpeechService] Using dynamic timeout: ${timeoutMs}ms for ${audioDurationSeconds}s audio`);
       } else {
