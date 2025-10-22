@@ -1,11 +1,15 @@
 import Constants from 'expo-constants';
 
+/**
+ * @brief Defines the structure for a request to the Gemini API.
+ */
 interface GeminiRequest {
   contents: Array<{
     parts: Array<{
       text: string;
     }>;
   }>;
+
   generationConfig?: {
     temperature?: number;
     topK?: number;
@@ -14,6 +18,9 @@ interface GeminiRequest {
   };
 }
 
+/**
+ * @brief Defines the expected structure for a response from the Gemini API.
+ */
 interface GeminiResponse {
   candidates: Array<{
     content: {
@@ -24,37 +31,66 @@ interface GeminiResponse {
   }>;
 }
 
+/**
+ * @brief Defines the structure of the JSON object expected from the text refinement process.
+ * 
+ * The title is optional, as it's only expected from the first chunk.
+ */
 interface RefinedTranscription {
   title?: string;
   formattedText: string;
 }
 
-// Fetch wrapper with timeout
+/**
+ * @brief A wrapper for the native `fetch` function that adds a configurable timeout.
+ *
+ * @param resource The `RequestInfo` (URL or Request object) to fetch.
+ * @param options The `RequestInit` options for the fetch call.
+ * @param timeout The timeout duration in milliseconds. Defaults to 30000 (30 seconds).
+ * @returns A promise that resolves with the parsed JSON response.
+ * @throws An error if the request times out or if the network response is not 'ok'.
+ */
 async function fetchWithTimeout(
   resource: RequestInfo,
   options: RequestInit = {},
   timeout = 30000 // 30 seconds default
-) {
+): Promise<any> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+
   try {
     const res = await fetch(resource, { ...options, signal: controller.signal });
     clearTimeout(id);
+
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       throw new Error(`API ${res.status}: ${JSON.stringify(body)}`);
     }
+
     return res.json();
+
   } catch (err: any) {
-    if (err.name === 'AbortError') throw new Error('Request timed out');
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+
     throw err;
   }
 }
 
+/**
+ * @brief Provides text processing services using the Gemini API.
+ *
+ * This class is responsible for sending raw text (in chunks) to the Gemini model
+ * for refinement, including error correction, formatting, and title generation.
+ */
 class TextService {
   private apiKey: string;
   private baseUrl: string;
 
+  /**
+   * @brief Initializes the TextService, retrieving the Gemini API key and setting the API endpoint.
+   */
   constructor() {
     this.apiKey = Constants.expoConfig?.extra?.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     // Updated to use Gemini 2.5 Flash for better text processing performance
@@ -65,6 +101,18 @@ class TextService {
     }
   }
 
+  /**
+   * @brief Refines a chunk of raw transcription text using the Gemini API.
+   *
+   * This method sends the text chunk with a specific prompt to the Gemini model.
+   * If it's the first chunk, it requests a title and formatted text.
+   * For subsequent chunks, it only requests formatted text.
+   *
+   * @param rawText The raw, unformatted transcription text chunk.
+   * @param isFirstChunk Whether this is the first chunk of a larger transcription (defaults to true).
+   * @returns A promise that resolves to a `RefinedTranscription` object.
+   * @throws An error if the API key is not configured, if no text is provided, or if the API request fails.
+   */
   async refineTranscription(rawText: string, isFirstChunk: boolean = true): Promise<RefinedTranscription> { //set true by default for first chunk
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
@@ -101,6 +149,7 @@ class TextService {
           "title": "Meaningful title in original language",
           "formattedText": "Enhanced text with proper structure and minimal corrections"
         }`;
+
     } else {
       // Prompt for subsequent chunks (no title, no JSON)
       prompt = `You are an expert text processor refining part of a longer voice transcription.
@@ -181,6 +230,7 @@ class TextService {
         const finishReason = candidate?.finishReason; //log the reason if available
         console.error(`[TextService] Refinement failed. No text found in response. Finish Reason: ${finishReason || 'Unknown'}`);
         console.error('[TextService] Full candidate:', JSON.stringify(candidate, null, 2)); //see full candidate for debugging
+
         throw new Error(`Refinement failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`); //stop current task
       }
 
@@ -203,6 +253,7 @@ class TextService {
           
           if (!cleanedResponse.startsWith('{')) {
             console.warn('[TextService] Response (first chunk) not JSON. Treating as safety block.');
+            
             return {
               title: 'Content Moderated',
               formattedText: 'This content could not be processed due to safety guidelines.'
@@ -228,8 +279,10 @@ class TextService {
           // Fallback: try to extract title and text manually using more robust regex
           // First try to extract from markdown-wrapped JSON
           let textToMatch = responseText;
+
           if (responseText.includes('```json')) {
             const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+
             if (jsonMatch) {
               textToMatch = jsonMatch[1];
             }
@@ -240,6 +293,7 @@ class TextService {
           
           if (titleMatch && textMatch) {
             console.log(`[TextService] Fallback parsing successful`);
+
             return {
               title: titleMatch[1].trim(),
               formattedText: textMatch[1].replace(/\\"/g, '"').trim()
@@ -248,6 +302,7 @@ class TextService {
           
           // Last resort fallback
           console.warn(`[TextService] Using fallback refinement`);
+
           return {
             title: `Journal Entry - ${new Date().toLocaleDateString()}`,
             formattedText: rawText // Return original text if parsing fails
@@ -267,6 +322,7 @@ class TextService {
 
           if (!cleanedResponse.startsWith('{')) {
             console.warn('[TextService] Response (subsequent chunk) not JSON. Treating as safety block.');
+
             return {
               formattedText: 'This content could not be processed due to safety guidelines.' 
             };
@@ -280,6 +336,7 @@ class TextService {
           }
 
           console.log(`[TextService] Subsequent chunk refinement successful.`);
+
           return {
             formattedText: parsed.formattedText.trim()
           };
@@ -290,6 +347,7 @@ class TextService {
           
           // Fallback for subsequent chunks: Use the raw text for this chunk
           console.warn(`[TextService] Using fallback refinement (subsequent chunk)`);
+
           return {
             formattedText: rawText // Return original chunk text if parsing fails
           };
@@ -298,6 +356,7 @@ class TextService {
 
     } catch (error) {
       console.error('Error refining transcription with Gemini:', error);
+      
       throw error;
     }
   }
