@@ -11,7 +11,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/bonsai.png",
+      image: "./assets/images/tree.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
@@ -58,10 +58,10 @@ export default {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/bonsai.png",
+          image: "./assets/images/tree.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: "#ffffff"
+          backgroundColor: "#F5F3E8"
         }
       ],
       [
