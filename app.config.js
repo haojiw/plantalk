@@ -74,6 +74,15 @@ export default {
         }
       ],
       [
+        "expo-asset",
+        {
+          images: [
+            "./assets/images/tree.png",
+            "./assets/images/icon.png",
+          ]
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Plantalk needs microphone access to record your voice journal entries."

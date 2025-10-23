@@ -65,7 +65,7 @@ export default function EntryScreen() {
             <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
               <View style={styles.plantCard}>
                 <Image
-                  source={require('@assets/images/tree-2.png')}
+                  source={require('@assets/images/tree.png')}
                   style={styles.plantImage}
                   contentFit="contain"
                 />
