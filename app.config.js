@@ -65,6 +65,15 @@ export default {
         }
       ],
       [
+        "expo-font",
+        {
+          fonts: [
+            "./assets/fonts/OpenDyslexic-Regular.otf",
+            "./assets/fonts/SpaceMono-Regular.ttf",
+          ]
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Plantalk needs microphone access to record your voice journal entries."

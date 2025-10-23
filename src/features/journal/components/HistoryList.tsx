@@ -96,11 +96,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm
   },
   sectionTitle: {
     ...theme.typography.heading,
     color: theme.colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sectionCard: {
     backgroundColor: theme.colors.background,

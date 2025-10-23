@@ -65,7 +65,7 @@ export default function EntryScreen() {
             <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
               <View style={styles.plantCard}>
                 <Image
-                  source={require('@assets/images/bonsai.png')}
+                  source={require('@assets/images/tree-2.png')}
                   style={styles.plantImage}
                   contentFit="contain"
                 />
@@ -89,12 +89,14 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xl,
   },
   greeting: {
-    ...theme.typography.title,
+    ...theme.typography.heading,
     color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    fontSize: 28,
+    lineHeight: 32,
+    marginVertical: theme.spacing.sm,
   },
   streakText: {
-    ...theme.typography.body,
+    ...theme.typography.handwriting,
     color: theme.colors.primary,
     fontWeight: '500',
   },
@@ -108,8 +110,8 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   plantCard: {
-    width: 200,
-    height: 200,
+    width: 300,
+    height: 300,
     borderRadius: theme.borderRadius.xl,
     backgroundColor: 'transparent',
     justifyContent: 'center',
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.lg,
   },
   plantImage: {
-    width: 300,
-    height: 300,
+    width: 400,
+    height: 400,
   },
 }); 

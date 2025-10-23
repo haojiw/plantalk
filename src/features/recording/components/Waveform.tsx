@@ -24,7 +24,7 @@ export const Waveform: React.FC<WaveformProps> = ({ waveformValues }) => {
       
       {/* Plant Image */}
       <Image 
-        source={require('@assets/images/bonsai.png')} 
+        source={require('@assets/images/trees-2.png')} 
         style={styles.plantImage}
         resizeMode="contain"
       />

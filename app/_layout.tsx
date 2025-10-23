@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SecureJournalProvider } from '@/core/providers/journal';
 import {
   DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 
@@ -16,6 +18,8 @@ import {
 
 import {
   Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 
@@ -26,6 +30,8 @@ import {
 
 import {
   Karla_400Regular,
+  Karla_500Medium,
+  Karla_600SemiBold,
   Karla_700Bold,
 } from '@expo-google-fonts/karla';
 
@@ -44,10 +50,36 @@ import {
   Lato_700Bold,
 } from '@expo-google-fonts/lato';
 
+import {
+  InstrumentSerif_400Regular,
+} from '@expo-google-fonts/instrument-serif';
+
+import {
+  PatrickHand_400Regular,
+} from '@expo-google-fonts/patrick-hand';
+
+import {
+  Merriweather_400Regular,
+  Merriweather_500Medium,
+  Merriweather_600SemiBold,
+  Merriweather_700Bold,
+} from '@expo-google-fonts/merriweather';
+
+import {
+  Pangolin_400Regular,
+} from '@expo-google-fonts/pangolin'; 
+
 
 export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('@assets/fonts/SpaceMono-Regular.ttf'),
+    Dyslexic: require('@assets/fonts/OpenDyslexic-Regular.otf'),
+
+    // Merriweather fonts
+    Merriweather_400Regular,
+    Merriweather_500Medium,
+    Merriweather_600SemiBold,
+    Merriweather_700Bold,
     // DM Sans fonts
     DMSans_400Regular,
     DMSans_700Bold,
@@ -55,6 +87,8 @@ export default function RootLayout() {
     DMSerifDisplay_400Regular,
     // Inter fonts
     Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
     Inter_700Bold,
     // Manrope fonts
     Manrope_400Regular,
@@ -71,6 +105,13 @@ export default function RootLayout() {
     // Lato fonts
     Lato_400Regular,
     Lato_700Bold,
+    // Instrument Serif fonts
+    InstrumentSerif_400Regular,
+    // PatrickHand fonts
+    PatrickHand_400Regular,
+    
+    // Pangolin fonts
+    Pangolin_400Regular,
   });
 
   if (!loaded) {
