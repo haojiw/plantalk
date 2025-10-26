@@ -184,8 +184,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.xxl,
+    paddingVertical: theme.spacing.md,
   },
   headerTitle: {
     ...theme.typography.title,

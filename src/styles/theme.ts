@@ -70,9 +70,9 @@ export const theme = {
   typography: {
     title: {
       fontFamily: fonts.heading,
-      fontSize: 28,
+      fontSize: 22,
       fontWeight: '700' as const,
-      lineHeight: 34,
+      lineHeight: 28,
     },
     heading: {
       fontFamily: fonts.heading,

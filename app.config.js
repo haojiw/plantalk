@@ -20,6 +20,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
+      ITSAppUsesNonExemptEncryption: false,
       bundleIdentifier: "com.haoji.plantalk",
       infoPlist: {
         UIBackgroundModes: [

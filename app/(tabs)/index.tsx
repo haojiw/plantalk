@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.lg,
   },
   plantImage: {
-    width: 400,
-    height: 400,
+    width: 300,
+    height: 300,
   },
 }); 
