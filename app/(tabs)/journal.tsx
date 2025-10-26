@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
-import { HistoryList } from '@/features/journal';
+import { HistoryList, WeeklyRecap } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
@@ -279,7 +279,7 @@ export default function JournalScreen() {
           </View>
         </View>
 
-        {/* Entries List */}
+       {/* Entries List */}
         <HistoryList
           sectionedEntries={sectionedEntries}
           swipedEntryId={swipedEntryId}
