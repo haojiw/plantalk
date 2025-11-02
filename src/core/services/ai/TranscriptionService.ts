@@ -17,7 +17,7 @@ interface TranscriptionResult {
   processingStage?: 'transcribing' | 'refining' | 'transcribing_failed' | 'refining_failed' | 'completed';
 }
 
-function chunkText(text: string, chunkSizeInWords: number = 1000): string[] { //split into chunkSizeInWords number of words
+function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //split into chunkSizeInWords number of words
   const words = text.split(/(\s+)/).filter(w => w.trim().length > 0);
   const chunks: string[] = [];
   if (words.length === 0) return [];
