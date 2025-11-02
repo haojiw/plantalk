@@ -2,6 +2,9 @@ import { getAbsoluteAudioPath } from '@/shared/utils';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 
+/**
+ * @brief Defines the structure for a request to the Gemini API that includes audio data.
+ */
 interface GeminiAudioRequest {
   contents: Array<{
     parts: Array<{
@@ -12,6 +15,7 @@ interface GeminiAudioRequest {
       };
     }>;
   }>;
+
   generationConfig?: {
     temperature?: number;
     topK?: number;
@@ -20,6 +24,9 @@ interface GeminiAudioRequest {
   };
 }
 
+/**
+ * @brief Defines the expected structure for a response from the Gemini API.
+ */
 interface GeminiResponse {
   candidates: Array<{
     content: {
@@ -30,32 +37,53 @@ interface GeminiResponse {
   }>;
 }
 
-// Fetch wrapper with timeout
+/**
+ * @brief A wrapper for the native `fetch` function that adds a configurable timeout.
+ *
+ * @param resource The `RequestInfo` (URL or Request object) to fetch.
+ * @param options The `RequestInit` options for the fetch call.
+ * @param timeout The timeout duration in milliseconds. Defaults to 30000 (30 seconds).
+ * @returns A promise that resolves with the parsed JSON response.
+ * @throws An error if the request times out or if the network response is not 'ok'.
+ */
 async function fetchWithTimeout(
   resource: RequestInfo,
   options: RequestInit = {},
   timeout = 30000
-) {
+): Promise<any> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+
   try {
     const res = await fetch(resource, { ...options, signal: controller.signal });
     clearTimeout(id);
+
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       throw new Error(`API ${res.status}: ${JSON.stringify(body)}`);
     }
+
     return res.json();
+
   } catch (err: any) {
     if (err.name === 'AbortError') throw new Error('Request timed out');
     throw err;
   }
 }
 
+/**
+ * @brief Provides speech-to-text services using the Gemini API.
+ *
+ * This class handles reading local audio files, encoding them,
+ * and sending them to Gemini for transcription.
+ */
 class SpeechService {
   private apiKey: string;
   private baseUrl: string;
 
+  /**
+   * @brief Initializes the SpeechService, retrieving the Gemini API key and setting the API endpoint.
+   */
   constructor() {
     this.apiKey = Constants.expoConfig?.extra?.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
     this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`;
@@ -65,6 +93,18 @@ class SpeechService {
     }
   }
 
+  /**
+   * @brief Transcribes an audio file to text using the Gemini API.
+   *
+   * This method reads the audio file, converts it to base64, determines the MIME type,
+   * and sends it to the Gemini API for transcription. It includes dynamic timeouts
+   * based on audio duration and robust safety-checking of the response.
+   *
+   * @param audioUri The local URI of the audio file to transcribe.
+   * @param audioDurationSeconds (Optional) The duration of the audio in seconds, used to calculate a dynamic request timeout.
+   * @returns A promise that resolves with the raw transcription text.
+   * @throws An error if the API key is not configured, the file doesn't exist, or the API request fails.
+   */
   async transcribeAudio(audioUri: string, audioDurationSeconds?: number): Promise<string> {
     if (!this.apiKey) {
       throw new Error('Gemini API key not configured');
@@ -148,18 +188,19 @@ class SpeechService {
         }
       };
 
-      // Calculate dynamic timeout based on audio duration
-      // Gemini represents each second of audio as 32 tokens, so longer audio needs more time
+      // Calculate dynamic timeout based on audio duration (Gemini represents each second of audio as 32 tokens, so longer audio = more time)
       let timeoutMs = 60000; // Default 60 seconds
       if (audioDurationSeconds) {
         if (audioDurationSeconds < 360) { // Less than 6 minutes
           timeoutMs = 60000; // 60 seconds
+
         } else {
           // For longer audio, use (duration / 30) seconds timeout (more generous than OpenAI)
           timeoutMs = Math.round((audioDurationSeconds / 60) * 10000);
           timeoutMs = Math.max(timeoutMs, 60000); // Minimum 60 seconds
           timeoutMs = Math.min(timeoutMs, 300000); // Maximum 5 minutes
         }
+        
         console.log(`[SpeechService] Using dynamic timeout: ${timeoutMs}ms for ${audioDurationSeconds}s audio`);
       } else {
         console.log(`[SpeechService] No duration provided, using default timeout: ${timeoutMs}ms`);
@@ -228,5 +269,5 @@ class SpeechService {
   }
 }
 
-// Create singleton instance
+// Create singleton instance of SpeechService
 export const speechService = new SpeechService();
