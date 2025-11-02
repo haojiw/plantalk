@@ -31,10 +31,10 @@ interface TranscriptionResult {
  * pieces that can be sent to the text refinement service without exceeding API limits.
  *
  * @param text The input string to be split.
- * @param chunkSizeInWords The maximum number of words per chunk. Defaults to 1000.
+ * @param chunkSizeInWords The maximum number of words per chunk. Defaults to 800.
  * @returns An array of text chunks.
  */
-function chunkText(text: string, chunkSizeInWords: number = 1000): string[] { //split into chunkSizeInWords number of words
+function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //split into chunkSizeInWords number of words
   const words = text.split(/(\s+)/).filter(w => w.trim().length > 0);
   const chunks: string[] = [];
 
