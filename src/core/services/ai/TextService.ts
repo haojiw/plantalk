@@ -195,7 +195,7 @@ class TextService {
 
       console.log(`[TextService] Sending request to Gemini API...`);
 
-      let timeoutMs = 30000 + Math.floor(rawText.length / 250) * 1000; // 30 seconds + 1 second per 250 chars
+      let timeoutMs = 60000 + Math.floor(rawText.length / 250) * 1000; // 60 seconds + 1 second per 250 chars
       timeoutMs = Math.min(timeoutMs, 180000); // Cap at 3 minutes
       console.log(`[TextService] Using refine timeout: ${timeoutMs}ms for text length: ${rawText.length}`);
 
