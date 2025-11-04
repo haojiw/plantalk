@@ -1,4 +1,4 @@
-import { EntryItem } from '@/features/journal';
+import { EntryItem, WeeklyRecap } from '@/features/journal';
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +58,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
         bouncesZoom={false}
         onTouchStart={onOutsideInteraction}
         onScroll={onScroll}>
+        <WeeklyRecap />
         {sectionedEntries.map((section) => (
           <View key={section.title}>
             {/* Section Header */}
@@ -96,11 +97,12 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm
   },
   sectionTitle: {
     ...theme.typography.heading,
     color: theme.colors.text,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   sectionCard: {
     backgroundColor: theme.colors.background,

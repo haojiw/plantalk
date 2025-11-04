@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
-import { HistoryList } from '@/features/journal';
+import { HistoryList, WeeklyRecap } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
@@ -274,12 +274,12 @@ export default function JournalScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>Journal</Text>
             <Pressable onPress={handleAddAudio} style={styles.addButton}>
-              <Ionicons name="add" size={24} color={theme.colors.primary} />
+              <Ionicons name="add" size={18} color={theme.colors.primary} />
             </Pressable>
           </View>
         </View>
 
-        {/* Entries List */}
+       {/* Entries List */}
         <HistoryList
           sectionedEntries={sectionedEntries}
           swipedEntryId={swipedEntryId}
@@ -301,8 +301,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   headerContent: {
     flexDirection: 'row',
@@ -315,9 +314,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 30,
+    height: 30,
+    borderRadius: theme.borderRadius.full,
     backgroundColor: theme.colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',

@@ -109,8 +109,8 @@ const styles = StyleSheet.create({
   textInput: {
     ...theme.typography.body,
     color: theme.colors.text,
-    lineHeight: 26,
-    fontSize: 16,
+    lineHeight: 24,
+    fontSize: 15,
     minHeight: 200,
     padding: 0,
     margin: 0,
@@ -121,8 +121,8 @@ const styles = StyleSheet.create({
   transcriptionText: {
     ...theme.typography.body,
     color: theme.colors.text,
-    lineHeight: 26,
-    fontSize: 16,
+    lineHeight: 24,
+    fontSize: 15,
   },
   failureContainer: {
     alignItems: 'center',

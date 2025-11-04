@@ -11,7 +11,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/bonsai.png",
+      image: "./assets/images/tree.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
@@ -20,6 +20,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
+      ITSAppUsesNonExemptEncryption: false,
       bundleIdentifier: "com.haoji.plantalk",
       infoPlist: {
         UIBackgroundModes: [
@@ -58,10 +59,28 @@ export default {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/bonsai.png",
+          image: "./assets/images/tree.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: "#ffffff"
+          backgroundColor: "#F5F3E8"
+        }
+      ],
+      [
+        "expo-font",
+        {
+          fonts: [
+            "./assets/fonts/OpenDyslexic-Regular.otf",
+            "./assets/fonts/SpaceMono-Regular.ttf",
+          ]
+        }
+      ],
+      [
+        "expo-asset",
+        {
+          images: [
+            "./assets/images/tree.png",
+            "./assets/images/icon.png",
+          ]
         }
       ],
       [

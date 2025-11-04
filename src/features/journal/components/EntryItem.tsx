@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
   },
   entryPreview: {
     ...theme.typography.body,
+    fontWeight: '400',
     color: theme.colors.text + '70',
     lineHeight: 20,
   },

@@ -97,33 +97,6 @@ export default function InsightsScreen() {
 
         {/* Cards */}
         <View style={styles.cardsContainer}>
-          {/* Weekly Recap Card */}
-          {renderExpandableCard(
-            'weekly-recap',
-            'calendar-outline',
-            'Weekly Recap',
-            <View>
-              <Text style={styles.contentText}>
-                Your weekly summary will appear here. We&apos;ll analyze your journal entries to show patterns, 
-                themes, and highlights from the past seven days.
-              </Text>
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>—</Text>
-                  <Text style={styles.statLabel}>Entries</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>—</Text>
-                  <Text style={styles.statLabel}>Minutes</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>—</Text>
-                  <Text style={styles.statLabel}>Topics</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
           {/* Your Patterns Card */}
           {renderExpandableCard(
             'patterns',
@@ -164,12 +137,16 @@ export default function InsightsScreen() {
               <Text style={styles.comingSoonText}>Interactive Mirror coming soon...</Text>
             </View>
           )}
-        </View>
 
-        {/* Developer Tools Section */}
-        <View style={styles.developerSection}>
-          <Text style={styles.developerSectionTitle}>Developer Tools</Text>
-          <AudioPathMigration />
+          {/* Developer Tools Card */}
+          {renderExpandableCard(
+            'developer-tools',
+            'code-slash-outline',
+            'Developer Tools',
+            <View>
+              <AudioPathMigration />
+            </View>
+          )}
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -184,7 +161,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxl,
   },
   headerTitle: {
@@ -234,25 +211,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: theme.spacing.md,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: theme.spacing.sm,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    ...theme.typography.title,
-    color: theme.colors.text + '40',
-    fontWeight: 'bold',
-    marginBottom: theme.spacing.xs,
-  },
-  statLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.text + '60',
-    fontSize: 12,
-  },
   patternsList: {
     marginTop: theme.spacing.sm,
   },
@@ -273,19 +231,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: theme.spacing.sm,
-  },
-  developerSection: {
-    paddingHorizontal: theme.spacing.lg,
-    marginTop: theme.spacing.xxl,
-  },
-  developerSectionTitle: {
-    ...theme.typography.subheading,
-    color: theme.colors.text + '60',
-    fontWeight: '600',
-    marginBottom: theme.spacing.md,
-    fontSize: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   bottomSpacing: {
     height: theme.spacing.lg,
