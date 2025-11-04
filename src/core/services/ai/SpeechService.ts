@@ -13,10 +13,19 @@ interface AssemblyAITranscript {
   error?: string;
 }
 
+/**
+ * @brief Provides speech-to-text services using the Gemini API.
+ *
+ * This class handles reading local audio files, encoding them,
+ * and sending them to Gemini for transcription.
+ */
 class SpeechService {
   private apiKey: string;
   private baseUrl: string = 'https://api.assemblyai.com/v2';
 
+  /**
+   * @brief Initializes the SpeechService, retrieving the Gemini API key and setting the API endpoint.
+   */
   constructor() {
     this.apiKey = Constants.expoConfig?.extra?.ASSEMBLYAI_API_KEY || process.env.ASSEMBLYAI_API_KEY || '';
     
@@ -202,5 +211,5 @@ class SpeechService {
   }
 }
 
-// Create singleton instance
+// Create singleton instance of SpeechService
 export const speechService = new SpeechService();

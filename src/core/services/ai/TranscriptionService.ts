@@ -2,14 +2,21 @@ import { getTotalDiskCapacityAsync } from 'expo-file-system/legacy';
 import { speechService } from './SpeechService';
 import { textService } from './TextService';
 
+/**
+ * @brief Defines the structure for a single transcription job in the queue.
+ */
 interface TranscriptionTask {
   entryId: string;
   audioUri: string;
   audioDurationSeconds?: number; // Audio duration in seconds for dynamic timeout calculation
+
   onProgress: (entryId: string, stage: 'transcribing' | 'refining', progress?: number) => void;
   onComplete: (entryId: string, result: TranscriptionResult, status: 'completed' | 'failed') => void;
 }
 
+/**
+ * @brief Defines the structure of the output after a transcription task is completed.
+ */
 interface TranscriptionResult {
   rawTranscription: string;
   refinedTranscription: string;
@@ -17,10 +24,23 @@ interface TranscriptionResult {
   processingStage?: 'transcribing' | 'refining' | 'transcribing_failed' | 'refining_failed' | 'completed';
 }
 
-function chunkText(text: string, chunkSizeInWords: number = 1000): string[] { //split into chunkSizeInWords number of words
+/**
+ * @brief Splits a long string of text into smaller chunks based on word count.
+ *
+ * This utility function is used to break down large transcriptions into manageable
+ * pieces that can be sent to the text refinement service without exceeding API limits.
+ *
+ * @param text The input string to be split.
+ * @param chunkSizeInWords The maximum number of words per chunk. Defaults to 800.
+ * @returns An array of text chunks.
+ */
+function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //split into chunkSizeInWords number of words
   const words = text.split(/(\s+)/).filter(w => w.trim().length > 0);
   const chunks: string[] = [];
-  if (words.length === 0) return [];
+
+  if (words.length === 0) { 
+    return [];
+  }
 
   let currentChunk: string[] = [];
   let currentWordCount = 0;
@@ -43,20 +63,32 @@ function chunkText(text: string, chunkSizeInWords: number = 1000): string[] { //
   return chunks;
 }
 
+/**
+ * @brief Manages a queue of audio transcription tasks, processing them sequentially.
+ *
+ * This service handles the entire pipeline from raw audio to a refined, titled transcription,
+ * ensuring that only one task is processed at a time. It now supports chunking for long transcriptions.
+ */
 class TranscriptionService {
   private queue: TranscriptionTask[] = [];
   private isProcessing = false;
 
-  // im just very excited about this new monitor i got
-
-  // Add a transcription task to the queue
-  addToQueue(task: TranscriptionTask) {
+  /**
+   * @brief Adds a new transcription task to the processing queue.
+   *
+   * @param task The transcription task object to be added to the queue.
+   */
+  addToQueue(task: TranscriptionTask): void {
     this.queue.push(task);
     this.processQueue();
   }
 
-  // Process the transcription queue
-  private async processQueue() {
+  /**
+   * @brief Processes tasks from the queue one by one in the order they were added.
+   *
+   * @private
+   */
+  private async processQueue(): Promise<void> {
     if (this.isProcessing || this.queue.length === 0) {
       return;
     }
@@ -65,6 +97,7 @@ class TranscriptionService {
 
     while (this.queue.length > 0) {
       const task = this.queue.shift();
+
       if (task) {
         await this.processTranscriptionTask(task);
       }
@@ -73,7 +106,17 @@ class TranscriptionService {
     this.isProcessing = false;
   }
 
-  // Process a single transcription task through the complete pipeline
+  /**
+   * @brief Manages the full lifecycle of a single transcription task, processing in chunks.
+   *
+   * This method first transcribes audio to raw text. It then splits the text into
+   * manageable chunks, refines each chunk individually, and reassembles them into a
+   * final, polished transcription with a single title.
+   *
+   * @private
+   * @param task The individual transcription task to process.
+   * @returns A promise that resolves when the task is fully processed.
+   */
   private async processTranscriptionTask(task: TranscriptionTask): Promise<void> {
     let rawTranscription: string = '';
 
@@ -91,16 +134,22 @@ class TranscriptionService {
         if (!rawTranscription.trim()) {
           throw new Error('No transcription returned from AssemblyAI');
         }
+
       } catch (transcriptionError) {
         console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
         
         // Handle transcription-specific failure
-        task.onComplete(task.entryId, {
-          rawTranscription: '',
-          refinedTranscription: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`,
-          aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-          processingStage: 'transcribing_failed'
-        }, 'failed');
+        task.onComplete(
+          task.entryId, 
+          {
+            rawTranscription: '',
+            refinedTranscription: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`,
+            aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
+            processingStage: 'transcribing_failed'
+          }, 
+          'failed',
+        );
+        
         return;
       }
 
@@ -118,6 +167,7 @@ class TranscriptionService {
         const isFirst = (i === 0);
         console.log(`[TranscriptionService] Refining chunk ${i + 1} of ${chunks.length} (isFirst: ${isFirst})...`);
         
+        // Refine the current chunk
         const result = await textService.refineTranscription(chunks[i], isFirst);
 
         //capture title if first chunk
@@ -165,7 +215,12 @@ class TranscriptionService {
     }
   }
 
-  // Legacy method for backwards compatibility (now uses mock data)
+  /**
+   * @brief Legacy method that generates a random mock transcription string for testing purposes.
+   *
+   * @private
+   * @returns A mock transcription string.
+   */
   private generateMockTranscription(): string {
     const mockTranscriptions = [
       "Today I reflected on my journey and realized how much I've grown. The challenges I faced last week taught me valuable lessons about resilience and patience. I'm grateful for the small moments of joy that helped me through difficult times.",
@@ -178,16 +233,21 @@ class TranscriptionService {
     return mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
   }
 
-  // Development method to test with mock data
+  /**
+   * @brief legacy development utility to simulate processing a task with mock data.
+   *
+   * @param task A simplified task object for the mock process.
+   */
   async addMockTranscriptionToQueue(task: Omit<TranscriptionTask, 'onProgress'> & { 
     onComplete: (entryId: string, transcription: string, status: 'completed' | 'failed') => void 
-  }) {
+  }): Promise<void> {
     try {
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const mockText = this.generateMockTranscription();
       task.onComplete(task.entryId, mockText, 'completed');
+
     } catch (error) {
       console.error('Mock transcription failed:', error);
       task.onComplete(task.entryId, 'Mock transcription failed. Please try again.', 'failed');
