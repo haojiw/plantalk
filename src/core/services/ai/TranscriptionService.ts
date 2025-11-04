@@ -80,19 +80,19 @@ class TranscriptionService {
     try {
       console.log(`[TranscriptionService] Starting processing for entry ${task.entryId}`);
       
-      // Step 1: Transcribe audio with Gemini
+      // Step 1: Transcribe audio with AssemblyAI
       task.onProgress(task.entryId, 'transcribing');
-      console.log(`[TranscriptionService] Starting Gemini transcription...`);
+      console.log(`[TranscriptionService] Starting AssemblyAI transcription...`);
       
       try {
         rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
-        console.log(`[TranscriptionService] Gemini completed. Raw text length: ${rawTranscription.length}`);
+        console.log(`[TranscriptionService] AssemblyAI completed. Raw text length: ${rawTranscription.length}`);
         
         if (!rawTranscription.trim()) {
-          throw new Error('No transcription returned from Gemini');
+          throw new Error('No transcription returned from AssemblyAI');
         }
       } catch (transcriptionError) {
-        console.error(`[TranscriptionService] Gemini transcription failed:`, transcriptionError);
+        console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
         
         // Handle transcription-specific failure
         task.onComplete(task.entryId, {

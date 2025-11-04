@@ -2,72 +2,132 @@ import { getAbsoluteAudioPath } from '@/shared/utils';
 import Constants from 'expo-constants';
 import * as FileSystem from 'expo-file-system/legacy';
 
-interface GeminiAudioRequest {
-  contents: Array<{
-    parts: Array<{
-      text?: string;
-      inlineData?: {
-        mimeType: string;
-        data: string;
-      };
-    }>;
-  }>;
-  generationConfig?: {
-    temperature?: number;
-    topK?: number;
-    topP?: number;
-    maxOutputTokens?: number;
-  };
+interface AssemblyAIUploadResponse {
+  upload_url: string;
 }
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-}
-
-// Fetch wrapper with timeout
-async function fetchWithTimeout(
-  resource: RequestInfo,
-  options: RequestInit = {},
-  timeout = 30000
-) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(resource, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      throw new Error(`API ${res.status}: ${JSON.stringify(body)}`);
-    }
-    return res.json();
-  } catch (err: any) {
-    if (err.name === 'AbortError') throw new Error('Request timed out');
-    throw err;
-  }
+interface AssemblyAITranscript {
+  id: string;
+  status: 'queued' | 'processing' | 'completed' | 'error';
+  text?: string;
+  error?: string;
 }
 
 class SpeechService {
   private apiKey: string;
-  private baseUrl: string;
+  private baseUrl: string = 'https://api.assemblyai.com/v2';
 
   constructor() {
-    this.apiKey = Constants.expoConfig?.extra?.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-    this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`;
+    this.apiKey = Constants.expoConfig?.extra?.ASSEMBLYAI_API_KEY || process.env.ASSEMBLYAI_API_KEY || '';
     
     if (!this.apiKey) {
-      console.error('Gemini API key not found. Please check your environment variables.');
+      console.error('AssemblyAI API key not found. Please check your environment variables.');
     }
+  }
+
+  /**
+   * Upload audio file to AssemblyAI
+   */
+  private async uploadAudio(audioBase64: string): Promise<string> {
+    console.log('[SpeechService] Uploading audio to AssemblyAI...');
+    
+    // Convert base64 to binary
+    const binaryString = atob(audioBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const response = await fetch(`${this.baseUrl}/upload`, {
+      method: 'POST',
+      headers: {
+        'authorization': this.apiKey,
+        'content-type': 'application/octet-stream',
+      },
+      body: bytes,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to upload audio: ${response.status} - ${errorText}`);
+    }
+
+    const data: AssemblyAIUploadResponse = await response.json();
+    console.log('[SpeechService] Audio uploaded successfully');
+    return data.upload_url;
+  }
+
+  /**
+   * Create transcription job
+   */
+  private async createTranscription(audioUrl: string): Promise<string> {
+    console.log('[SpeechService] Creating transcription job...');
+    
+    const response = await fetch(`${this.baseUrl}/transcript`, {
+      method: 'POST',
+      headers: {
+        'authorization': this.apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        audio_url: audioUrl,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create transcription: ${response.status} - ${errorText}`);
+    }
+
+    const data: AssemblyAITranscript = await response.json();
+    console.log('[SpeechService] Transcription job created:', data.id);
+    return data.id;
+  }
+
+  /**
+   * Poll transcription status until completed
+   */
+  private async pollTranscription(transcriptId: string): Promise<AssemblyAITranscript> {
+    console.log('[SpeechService] Polling transcription status...');
+    
+    const pollingEndpoint = `${this.baseUrl}/transcript/${transcriptId}`;
+    const maxAttempts = 200; // 10 minutes with 3-second intervals
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const pollingResponse = await fetch(pollingEndpoint, {
+        headers: {
+          'authorization': this.apiKey,
+        },
+      });
+
+      if (!pollingResponse.ok) {
+        const errorText = await pollingResponse.text();
+        throw new Error(`Failed to get transcription status: ${pollingResponse.status} - ${errorText}`);
+      }
+
+      const transcriptionResult: AssemblyAITranscript = await pollingResponse.json();
+      
+      console.log(`[SpeechService] Transcription status: ${transcriptionResult.status}`);
+
+      if (transcriptionResult.status === 'completed') {
+        console.log('[SpeechService] Transcription completed successfully');
+        return transcriptionResult;
+      } else if (transcriptionResult.status === 'error') {
+        throw new Error(`Transcription failed: ${transcriptionResult.error || 'Unknown error'}`);
+      }
+
+      // Wait 3 seconds before polling again (as per AssemblyAI documentation)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      attempts++;
+    }
+
+    throw new Error('Transcription timeout: took longer than expected');
   }
 
   async transcribeAudio(audioUri: string, audioDurationSeconds?: number): Promise<string> {
     if (!this.apiKey) {
-      throw new Error('Gemini API key not configured');
+      throw new Error('AssemblyAI API key not configured');
     }
 
     try {
@@ -81,7 +141,7 @@ class SpeechService {
       
       console.log(`[SpeechService] Using absolute path: ${absoluteAudioUri}`);
       
-      // First, get file info to understand what we're working with
+      // Verify the file exists
       const fileInfo = await FileSystem.getInfoAsync(absoluteAudioUri);
       console.log(`[SpeechService] File info:`, {
         exists: fileInfo.exists,
@@ -104,124 +164,37 @@ class SpeechService {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      // Determine MIME type based on file extension
-      let mimeType = 'audio/mp3'; // default
-      if (absoluteAudioUri.includes('.m4a')) {
-        mimeType = 'audio/aac';
-      } else if (absoluteAudioUri.includes('.mp4')) {
-        mimeType = 'audio/mp4';
-      } else if (absoluteAudioUri.includes('.wav')) {
-        mimeType = 'audio/wav';
-      } else if (absoluteAudioUri.includes('.mp3')) {
-        mimeType = 'audio/mp3';
-      } else if (absoluteAudioUri.includes('.ogg')) {
-        mimeType = 'audio/ogg';
-      } else if (absoluteAudioUri.includes('.flac')) {
-        mimeType = 'audio/flac';
-      } else if (absoluteAudioUri.includes('.aiff')) {
-        mimeType = 'audio/aiff';
+      // Step 1: Upload audio file to AssemblyAI
+      const uploadUrl = await this.uploadAudio(audioBase64);
+
+      // Step 2: Create transcription job
+      const transcriptId = await this.createTranscription(uploadUrl);
+
+      // Step 3: Poll until transcription is complete
+      const transcript = await this.pollTranscription(transcriptId);
+
+      if (!transcript.text) {
+        console.error(`[SpeechService] Transcription completed but no text found`);
+        throw new Error('Transcription failed: No text in AssemblyAI response.');
       }
 
-      console.log(`[SpeechService] Using MIME type: ${mimeType}`);
-
-      const requestBody: GeminiAudioRequest = {
-        contents: [
-          {
-            parts: [
-              {
-                text: "Generate a transcript of the speech."
-              },
-              {
-                inlineData: {
-                  mimeType: mimeType,
-                  data: audioBase64
-                }
-              }
-            ]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.1, // Lower temperature for more accurate transcription
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192, // Longer transcriptions
-        }
-      };
-
-      // Calculate dynamic timeout based on audio duration
-      // Gemini represents each second of audio as 32 tokens, so longer audio needs more time
-      let timeoutMs = 60000; // Default 60 seconds
-      if (audioDurationSeconds) {
-        if (audioDurationSeconds < 180) { // Less than 3 minutes
-          timeoutMs = 60000; // 60 seconds
-        } else {
-          const audioDurationMinutes = audioDurationSeconds / 60;
-          // for every 1 minute, add 20 seconds to the timeout 
-          timeoutMs = audioDurationMinutes * 20000;
-          timeoutMs = Math.max(timeoutMs, 60000); // Minimum 60 seconds
-          timeoutMs = Math.min(timeoutMs, 600000); // Maximum 10 minutes
-        }
-        console.log(`[SpeechService] Using dynamic timeout: ${timeoutMs}ms for ${audioDurationSeconds}s audio`);
-      } else {
-        console.log(`[SpeechService] No duration provided, using default timeout: ${timeoutMs}ms`);
-      }
-
-      console.log(`[SpeechService] Sending request to Gemini API...`);
-
-      const data = await fetchWithTimeout(
-        this.baseUrl,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        },
-        timeoutMs
-      );
-
-      console.log(`[SpeechService] Gemini API response received`);
-
-      //FIRST SAFETY CHECK
-      if (!data.candidates || data.candidates.length === 0) {
-        console.warn('[SpeechService] Received a response with no candidates. This is likely a safety block.');
-        // Return the placeholder message so the app doesn't crash
-        return 'Transcription could not be generated due to safety guidelines.';
-      }
-
-      const candidate = data.candidates?.[0];
-      const finishReason = candidate?.finishReason;
-
-      //SECOND AND THIRD SAFETY CHECKS
-      if (finishReason === 'SAFETY' || finishReason === 'PROHIBITED_CONTENT') {
-        console.warn('[SpeechService] Audio content flagged by safety filter. Returning a placeholder message.');
-        return 'Transcription could not be generated due to safety guidelines.';
-      }
-
-      const transcriptionText = candidate?.content?.parts?.[0]?.text; //handle other reasons like maxtokens 
-
-      if (!transcriptionText) {
-        console.error(`[SpeechService] Transcription failed. No text found in response. Finish Reason: ${finishReason || 'Unknown'}`);
-        console.error('[SpeechService] Full candidate:', JSON.stringify(candidate, null, 2));
-        throw new Error(`Transcription failed: No text in Gemini response. (Reason: ${finishReason || 'Unknown'})`);
-      }
-
-      console.log(`[SpeechService] Transcription successful, length: ${transcriptionText.length}`);
-      console.log(`[SpeechService] Transcription: ${transcriptionText.trim()}`);
-      return transcriptionText.trim();
+      console.log(`[SpeechService] Transcription successful, length: ${transcript.text.length}`);
+      console.log(`[SpeechService] Transcription: ${transcript.text.trim()}`);
+      return transcript.text.trim();
       
     } catch (error) {
-      console.error('Error transcribing audio with Gemini:', error);
+      console.error('Error transcribing audio with AssemblyAI:', error);
       
       // Enhanced error logging
-      if (error instanceof Error && error.message && error.message.includes('400')) {
-        console.error('[SpeechService] Audio format issue detected. This could be:');
-        console.error('1. Unsupported audio format');
-        console.error('2. Corrupted audio file');
-        console.error('3. File too short');
-        console.error('4. File too long (> 9.5 hours)');
-        console.error('5. Invalid audio encoding');
-        console.error('6. File too large (> 20MB for inline data)');
+      if (error instanceof Error) {
+        console.error('[SpeechService] Error details:', error.message);
+        if (error.message.includes('400') || error.message.includes('format')) {
+          console.error('[SpeechService] Audio format issue detected. This could be:');
+          console.error('1. Unsupported audio format');
+          console.error('2. Corrupted audio file');
+          console.error('3. File too short');
+          console.error('4. Invalid audio encoding');
+        }
       }
       
       throw error;
