@@ -96,6 +96,7 @@ export default {
     extra: {
       WHISPER_API_KEY: process.env.WHISPER_API_KEY,
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+      ASSEMBLYAI_API_KEY: process.env.ASSEMBLYAI_API_KEY,
       eas: {
         projectId: "f32ebaa2-c90e-4631-a5ef-947dd6ca515c"
       }
