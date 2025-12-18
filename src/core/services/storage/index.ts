@@ -3,6 +3,4 @@ export { backupService } from './BackupService';
 export { databaseService } from './DatabaseService';
 export { dataValidationService } from './DataValidationService';
 export { secureStorageService } from './SecureStorageService';
-export { transcriptionJobService } from './TranscriptionJobService';
-export type { TranscriptionJob, TranscriptionJobStatus } from './TranscriptionJobService';
 
