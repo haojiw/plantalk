@@ -35,33 +35,28 @@ class SpeechService {
   }
 
   /**
-   * Upload audio file to AssemblyAI
+   * Upload audio file to AssemblyAI using streaming upload to avoid OOM on large files
    */
-  private async uploadAudio(audioBase64: string): Promise<string> {
+  private async uploadAudio(fileUri: string): Promise<string> {
     console.log('[SpeechService] Uploading audio to AssemblyAI...');
-    
-    // Convert base64 to binary
-    const binaryString = atob(audioBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+
+    const response = await FileSystem.uploadAsync(
+      `${this.baseUrl}/upload`,
+      fileUri,
+      {
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: {
+          'authorization': this.apiKey,
+          'content-type': 'application/octet-stream',
+        },
+      }
+    );
+
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(`Failed to upload audio: ${response.status} - ${response.body}`);
     }
 
-    const response = await fetch(`${this.baseUrl}/upload`, {
-      method: 'POST',
-      headers: {
-        'authorization': this.apiKey,
-        'content-type': 'application/octet-stream',
-      },
-      body: bytes,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to upload audio: ${response.status} - ${errorText}`);
-    }
-
-    const data: AssemblyAIUploadResponse = await response.json();
+    const data: AssemblyAIUploadResponse = JSON.parse(response.body);
     console.log('[SpeechService] Audio uploaded successfully');
     return data.upload_url;
   }
@@ -168,13 +163,8 @@ class SpeechService {
         throw new Error('Audio file is empty');
       }
 
-      // Read the audio file as base64
-      const audioBase64 = await FileSystem.readAsStringAsync(absoluteAudioUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Step 1: Upload audio file to AssemblyAI
-      const uploadUrl = await this.uploadAudio(audioBase64);
+      // Step 1: Upload audio file to AssemblyAI (streams from disk to avoid OOM)
+      const uploadUrl = await this.uploadAudio(absoluteAudioUri);
 
       // Step 2: Create transcription job
       const transcriptId = await this.createTranscription(uploadUrl);
