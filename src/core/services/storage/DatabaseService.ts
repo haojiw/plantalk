@@ -21,6 +21,17 @@ interface DatabaseMetadata {
   updatedAt: string;
 }
 
+export type OutboxStatus = 'pending_upload' | 'uploading' | 'processing' | 'failed';
+
+export interface TranscriptionOutboxEntry {
+  id: string;
+  local_uri: string;
+  status: OutboxStatus;
+  server_job_id: string | null;
+  created_at: number;
+  retry_count: number;
+}
+
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private static readonly DB_NAME = 'plantalk.db';
@@ -104,6 +115,23 @@ class DatabaseService {
       await this.db.execAsync(`
         INSERT OR IGNORE INTO metadata (id, streak, lastEntryISO, totalEntries, createdAt, updatedAt)
         VALUES (1, 0, NULL, 0, datetime('now'), datetime('now'));
+      `);
+
+      // Transcription outbox table for reliable transcription processing
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS transcription_outbox (
+          id TEXT PRIMARY KEY,
+          local_uri TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending_upload',
+          server_job_id TEXT,
+          created_at INTEGER NOT NULL,
+          retry_count INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+
+      // Index for faster outbox queries
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_outbox_status ON transcription_outbox(status);
       `);
 
       console.log('[DatabaseService] Tables created successfully');
@@ -305,6 +333,36 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Get entries by their processing stage (for resuming pending transcriptions)
+   * @param stages - Array of processing stages to filter by
+   * @returns Array of JournalEntry objects matching the specified stages
+   */
+  async getEntriesByProcessingStage(stages: ('transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed')[]): Promise<JournalEntry[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      if (stages.length === 0) {
+        return [];
+      }
+      
+      const placeholders = stages.map(() => '?').join(', ');
+      const query = `SELECT * FROM entries WHERE processingStage IN (${placeholders}) ORDER BY createdAt ASC`;
+      
+      const results = await this.db.getAllAsync<DatabaseEntry>(query, stages);
+      
+      const entries = await Promise.all(
+        results.map(result => this.convertDatabaseEntryToJournalEntry(result))
+      );
+
+      console.log(`[DatabaseService] Found ${entries.length} entries with processing stages: ${stages.join(', ')}`);
+      return entries;
+    } catch (error) {
+      console.error('[DatabaseService] Failed to get entries by processing stage:', error);
+      return [];
+    }
+  }
+
   // Get current app state/metadata
   async getAppState(): Promise<JournalState> {
     if (!this.db) throw new Error('Database not initialized');
@@ -455,6 +513,27 @@ class DatabaseService {
     }
   }
 
+  // Add a new entry to the transcription outbox
+  async addToOutbox(uri: string): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const id = crypto.randomUUID();
+      const createdAt = Date.now();
+
+      await this.db.runAsync(`
+        INSERT INTO transcription_outbox (id, local_uri, status, server_job_id, created_at, retry_count)
+        VALUES (?, ?, 'pending_upload', NULL, ?, 0)
+      `, [id, uri, createdAt]);
+
+      console.log(`[DatabaseService] Added to outbox: ${id}`);
+      return id;
+    } catch (error) {
+      console.error('[DatabaseService] Failed to add to outbox:', error);
+      throw error;
+    }
+  }
+
   // Close database connection
   async close(): Promise<void> {
     if (this.db) {
@@ -480,3 +559,6 @@ class DatabaseService {
 
 // Create singleton instance
 export const databaseService = new DatabaseService();
+
+// Convenience export for adding to transcription outbox
+export const addToOutbox = (uri: string): Promise<string> => databaseService.addToOutbox(uri);

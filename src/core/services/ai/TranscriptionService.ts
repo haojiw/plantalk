@@ -1,4 +1,4 @@
-import { getTotalDiskCapacityAsync } from 'expo-file-system/legacy';
+import { databaseService } from '@/core/services/storage';
 import { speechService } from './SpeechService';
 import { textService } from './TextService';
 
@@ -9,6 +9,8 @@ interface TranscriptionTask {
   entryId: string;
   audioUri: string;
   audioDurationSeconds?: number; // Audio duration in seconds for dynamic timeout calculation
+  existingRawText?: string; // For resuming from checkpoint (skip STT if present)
+  existingStage?: 'transcribing' | 'refining'; // Current stage when resuming
 
   onProgress: (entryId: string, stage: 'transcribing' | 'refining', progress?: number) => void;
   onComplete: (entryId: string, result: TranscriptionResult, status: 'completed' | 'failed') => void;
@@ -68,19 +70,38 @@ function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //s
  *
  * This service handles the entire pipeline from raw audio to a refined, titled transcription,
  * ensuring that only one task is processed at a time. It now supports chunking for long transcriptions.
+ * 
+ * The service uses the database as the source of truth for processing state, enabling
+ * crash recovery through checkpointing and the resumePendingTasks watchdog.
  */
 class TranscriptionService {
   private queue: TranscriptionTask[] = [];
   private isProcessing = false;
+  
+  /**
+   * @brief Set of entry IDs currently active (queued or processing).
+   * Prevents double-queueing the same entry if resumePendingTasks is called multiple times.
+   */
+  private activeTaskIds = new Set<string>();
 
   /**
    * @brief Adds a new transcription task to the processing queue.
+   * Prevents duplicate entries from being queued.
    *
    * @param task The transcription task object to be added to the queue.
+   * @returns boolean indicating if the task was added (false if already active)
    */
-  addToQueue(task: TranscriptionTask): void {
+  addToQueue(task: TranscriptionTask): boolean {
+    // Prevent double-queueing the same entry
+    if (this.activeTaskIds.has(task.entryId)) {
+      console.log(`[TranscriptionService] Entry ${task.entryId} is already queued or processing, skipping`);
+      return false;
+    }
+    
+    this.activeTaskIds.add(task.entryId);
     this.queue.push(task);
     this.processQueue();
+    return true;
   }
 
   /**
@@ -109,48 +130,66 @@ class TranscriptionService {
   /**
    * @brief Manages the full lifecycle of a single transcription task, processing in chunks.
    *
-   * This method first transcribes audio to raw text. It then splits the text into
-   * manageable chunks, refines each chunk individually, and reassembles them into a
-   * final, polished transcription with a single title.
+   * This method first transcribes audio to raw text (unless checkpointed rawText exists).
+   * It then splits the text into manageable chunks, refines each chunk individually, 
+   * and reassembles them into a final, polished transcription with a single title.
+   * 
+   * Checkpointing: After STT completes, rawText is immediately saved to the database
+   * with processingStage='refining'. This ensures the expensive STT step is never repeated.
    *
    * @private
    * @param task The individual transcription task to process.
    * @returns A promise that resolves when the task is fully processed.
    */
   private async processTranscriptionTask(task: TranscriptionTask): Promise<void> {
-    let rawTranscription: string = '';
+    let rawTranscription: string = task.existingRawText || '';
 
     try {
       console.log(`[TranscriptionService] Starting processing for entry ${task.entryId}`);
+      console.log(`[TranscriptionService] Existing raw text: ${rawTranscription ? 'yes (' + rawTranscription.length + ' chars)' : 'no'}`);
+      console.log(`[TranscriptionService] Existing stage: ${task.existingStage || 'none'}`);
       
-      // Step 1: Transcribe audio with AssemblyAI
-      task.onProgress(task.entryId, 'transcribing');
-      console.log(`[TranscriptionService] Starting AssemblyAI transcription...`);
-      
-      try {
-        rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
-        console.log(`[TranscriptionService] AssemblyAI completed. Raw text length: ${rawTranscription.length}`);
+      // Step 1: Transcribe audio with AssemblyAI (skip if we have checkpointed rawText)
+      if (!rawTranscription.trim()) {
+        task.onProgress(task.entryId, 'transcribing');
+        console.log(`[TranscriptionService] Starting AssemblyAI transcription...`);
         
-        if (!rawTranscription.trim()) {
-          throw new Error('No transcription returned from AssemblyAI');
-        }
+        try {
+          rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
+          console.log(`[TranscriptionService] AssemblyAI completed. Raw text length: ${rawTranscription.length}`);
+          
+          if (!rawTranscription.trim()) {
+            throw new Error('No transcription returned from AssemblyAI');
+          }
 
-      } catch (transcriptionError) {
-        console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
-        
-        // Handle transcription-specific failure
-        task.onComplete(
-          task.entryId, 
-          {
-            rawTranscription: '',
-            refinedTranscription: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`,
-            aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-            processingStage: 'transcribing_failed'
-          }, 
-          'failed',
-        );
-        
-        return;
+          // CHECKPOINT: Save rawText to database immediately after STT completes
+          // This ensures we never have to repeat the expensive STT step
+          console.log(`[TranscriptionService] Checkpointing: saving rawText to database...`);
+          await databaseService.updateEntry(task.entryId, {
+            rawText: rawTranscription,
+            processingStage: 'refining'
+          });
+          console.log(`[TranscriptionService] Checkpoint saved successfully`);
+
+        } catch (transcriptionError) {
+          console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
+          
+          // Handle transcription-specific failure
+          task.onComplete(
+            task.entryId, 
+            {
+              rawTranscription: '',
+              refinedTranscription: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`,
+              aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
+              processingStage: 'transcribing_failed'
+            }, 
+            'failed',
+          );
+          
+          return;
+        }
+      } else {
+        console.log(`[TranscriptionService] Skipping STT step - using checkpointed rawText`);
       }
 
       // Step 2: Refine with Gemini text service
@@ -212,6 +251,74 @@ class TranscriptionService {
         aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
         processingStage: stageFailed
       }, stageFailed === 'transcribing_failed' ? 'failed' : 'completed'); // Mark 'completed' if we have usable text
+    } finally {
+      // Always remove from active set when task completes (success or failure)
+      this.activeTaskIds.delete(task.entryId);
+    }
+  }
+
+  /**
+   * @brief Watchdog method to resume pending transcription tasks after app restart.
+   * 
+   * Queries the database for entries stuck in 'transcribing' or 'refining' state
+   * and re-queues them for processing. Uses checkpointed rawText when available
+   * to skip the expensive STT step.
+   * 
+   * @param onProgress Callback for progress updates
+   * @param onComplete Callback for completion (success or failure)
+   * @returns Promise that resolves when all pending tasks are queued (not completed)
+   */
+  async resumePendingTasks(
+    onProgress: (entryId: string, stage: 'transcribing' | 'refining', progress?: number) => void,
+    onComplete: (entryId: string, result: TranscriptionResult, status: 'completed' | 'failed') => void
+  ): Promise<void> {
+    try {
+      console.log('[TranscriptionService] Watchdog: Checking for pending transcription tasks...');
+      
+      // Query for zombie entries stuck in processing states
+      const pendingEntries = await databaseService.getEntriesByProcessingStage(['transcribing', 'refining']);
+      
+      if (pendingEntries.length === 0) {
+        console.log('[TranscriptionService] Watchdog: No pending tasks found');
+        return;
+      }
+      
+      console.log(`[TranscriptionService] Watchdog: Found ${pendingEntries.length} pending task(s)`);
+      
+      for (const entry of pendingEntries) {
+        // Skip entries without audio (shouldn't happen, but defensive coding)
+        if (!entry.audioUri) {
+          console.warn(`[TranscriptionService] Watchdog: Entry ${entry.id} has no audioUri, marking as failed`);
+          onComplete(entry.id, {
+            rawTranscription: '',
+            refinedTranscription: 'Processing failed: Audio file not found.',
+            aiGeneratedTitle: entry.title || `Entry - ${new Date().toLocaleDateString()}`,
+            processingStage: 'transcribing_failed'
+          }, 'failed');
+          continue;
+        }
+        
+        console.log(`[TranscriptionService] Watchdog: Resuming entry ${entry.id} (stage: ${entry.processingStage}, hasRawText: ${!!entry.rawText})`);
+        
+        // Queue the task with checkpointed data if available
+        const added = this.addToQueue({
+          entryId: entry.id,
+          audioUri: entry.audioUri,
+          audioDurationSeconds: entry.duration,
+          existingRawText: entry.rawText, // Pass checkpointed rawText to skip STT
+          existingStage: entry.processingStage as 'transcribing' | 'refining',
+          onProgress,
+          onComplete
+        });
+        
+        if (added) {
+          console.log(`[TranscriptionService] Watchdog: Entry ${entry.id} queued for resumption`);
+        }
+      }
+      
+      console.log('[TranscriptionService] Watchdog: All pending tasks have been queued');
+    } catch (error) {
+      console.error('[TranscriptionService] Watchdog: Error resuming pending tasks:', error);
     }
   }
 

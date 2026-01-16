@@ -1,3 +1,4 @@
+import { transcriptionService } from '@/core/services/ai';
 import { JournalEntry, JournalState } from '@/shared/types';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { initializeServices } from './initialization/initializeServices';
@@ -46,6 +47,26 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
       await performMigrationFromOldStorage();
 
       setIsInitialized(true);
+      
+      // WATCHDOG: Resume any pending transcription tasks that were interrupted
+      // This handles crash recovery - entries stuck in 'transcribing' or 'refining' state
+      console.log('[SecureJournalProvider] Starting transcription watchdog...');
+      transcriptionService.resumePendingTasks(
+        // onProgress callback - updates UI with current stage
+        async (entryId: string, stage: 'transcribing' | 'refining') => {
+          await entryOps.updateEntryProgress(entryId, stage);
+          // Reload state to update UI
+          const updatedState = await loadStateOp();
+          setState(updatedState);
+        },
+        // onComplete callback - finalizes the entry with transcription results
+        async (entryId: string, result: any, status: 'completed' | 'failed') => {
+          await entryOps.updateEntryTranscription(entryId, result, status);
+          // Reload state to update UI
+          const updatedState = await loadStateOp();
+          setState(updatedState);
+        }
+      );
     } catch (error) {
       console.error('[SecureJournalProvider] Initialization error:', error);
       setState({ streak: 0, lastEntryISO: null, entries: [] });
