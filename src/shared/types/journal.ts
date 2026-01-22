@@ -6,7 +6,13 @@ export interface JournalEntry {
     rawText?: string; // Original Whisper output
     audioUri?: string;
     duration?: number; // in seconds
-    processingStage?: 'transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed';
+    processingStage?: 
+      | 'transcribing' 
+      | 'refining' 
+      | 'completed' 
+      | 'transcribing_failed' 
+      | 'refining_failed'
+      | 'audio_unavailable'; // Audio file missing/corrupted - not retryable
   }
   
   export interface JournalState {

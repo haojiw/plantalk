@@ -34,6 +34,17 @@ export class SpeechServiceAPIError extends Error {
 }
 
 /**
+ * Custom error class for audio file issues (missing, corrupted, empty)
+ * These are NOT retryable - requires user to re-record
+ */
+export class SpeechServiceFileError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SpeechServiceFileError';
+  }
+}
+
+/**
  * Helper function to add timeout to fetch requests
  */
 async function fetchWithTimeout(
@@ -143,7 +154,8 @@ class SpeechService {
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            audio_url: audioUrl,
+            audio_url: audioUrl, 
+            language_detection: true, 
           }),
         },
         30000 // 30 second timeout
@@ -264,7 +276,7 @@ class SpeechService {
       // Convert relative path to absolute path if needed
       const absoluteAudioUri = getAbsoluteAudioPath(audioUri);
       if (!absoluteAudioUri) {
-        throw new SpeechServiceAPIError('Invalid audio URI - could not resolve path');
+        throw new SpeechServiceFileError('Invalid audio URI - could not resolve path');
       }
       
       console.log(`[SpeechService] Using absolute path: ${absoluteAudioUri}`);
@@ -278,13 +290,15 @@ class SpeechService {
       });
 
       if (!fileInfo.exists) {
-        throw new SpeechServiceAPIError('Audio file does not exist - may have been deleted');
+        // File missing - not retryable, user needs to re-record
+        throw new SpeechServiceFileError('Audio file does not exist - may have been deleted');
       }
 
       // Check file size if available
       const fileSize = (fileInfo as any).size;
       if (fileSize !== undefined && fileSize === 0) {
-        throw new SpeechServiceAPIError('Audio file is empty - recording may have failed');
+        // Empty file - not retryable, recording failed
+        throw new SpeechServiceFileError('Audio file is empty - recording may have failed');
       }
 
       // Step 1: Upload audio file to AssemblyAI (streams from disk to avoid OOM)
@@ -309,7 +323,9 @@ class SpeechService {
       console.error('[SpeechService] Error transcribing audio:', error);
       
       // Re-throw our custom errors as-is (they have good messages)
-      if (error instanceof SpeechServiceAPIError || error instanceof SpeechServiceNetworkError) {
+      if (error instanceof SpeechServiceFileError || 
+          error instanceof SpeechServiceAPIError || 
+          error instanceof SpeechServiceNetworkError) {
         throw error;
       }
       
@@ -323,7 +339,8 @@ class SpeechService {
           console.error('2. Corrupted audio file');
           console.error('3. File too short');
           console.error('4. Invalid audio encoding');
-          throw new SpeechServiceAPIError(`Audio format error: ${error.message}`);
+          // Format errors are file-related and not retryable
+          throw new SpeechServiceFileError(`Audio format error: ${error.message}`);
         }
         
         // Check for network-related errors

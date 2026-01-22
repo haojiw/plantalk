@@ -42,20 +42,29 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   const processingPulse = useSharedValue(1); // For processing indicator animation
 
   // Helper function to get appropriate preview text based on processing stage
+  // Content resolution logic:
+  // 1. When both rawText and text are empty → show status message
+  // 2. When we have rawText but text is empty → display rawText
+  // 3. When we have both → display text
   const getPreviewText = (entry: JournalEntry) => {
-    if (entry.processingStage === 'transcribing') {
-      return 'Transcribing audio...';
-    } else if (entry.processingStage === 'refining') {
-      return 'Refining text...';
-    } else if (entry.processingStage === 'transcribing_failed') {
-      return 'Transcription failed. Please try again.';
-    } else if (entry.processingStage === 'refining_failed') {
-      return entry.text || 'Refinement failed, but transcription available.';
-    } else if (entry.processingStage === 'completed' && entry.text) {
-      return entry.text;
-    } else {
-      return 'No transcription available.';
+    const hasRawText = entry.rawText && entry.rawText.trim() !== '';
+    const hasText = entry.text && entry.text.trim() !== '';
+    
+    // Both empty - show status based on processing stage
+    if (!hasRawText && !hasText) {
+      if (entry.processingStage === 'transcribing') {
+        return 'Transcribing audio...';
+      } else if (entry.processingStage === 'transcribing_failed') {
+        return 'Transcription failed. Please try again.';
+      } else if (entry.processingStage === 'audio_unavailable') {
+        return 'Audio file unavailable.';
+      } else {
+        return 'No transcription available.';
+      }
     }
+    
+    // Have content - prefer text if available, otherwise use rawText
+    return hasText ? entry.text! : entry.rawText!;
   };
 
   // Handle external close triggers (when another entry is opened or outside interaction)
@@ -234,7 +243,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
                     <Animated.View style={[styles.processingIndicator, processingAnimatedStyle]}>
                       <Ionicons name="ellipsis-horizontal" size={12} color={theme.colors.primary} />
                     </Animated.View>
-                  ) : (item.processingStage === 'transcribing_failed' || item.processingStage === 'refining_failed') ? (
+                  ) : (item.processingStage === 'transcribing_failed' || item.processingStage === 'refining_failed' || item.processingStage === 'audio_unavailable') ? (
                     // Show error indicator for failed states
                     <View style={styles.errorIndicator}>
                       <Ionicons name="alert-circle" size={12} color={theme.colors.accent} />

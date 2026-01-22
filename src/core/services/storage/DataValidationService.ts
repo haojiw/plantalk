@@ -72,7 +72,7 @@ class DataValidationService {
       }
 
       if (entry.processingStage !== undefined) {
-        const validStages = ['transcribing', 'refining', 'completed', 'transcribing_failed', 'refining_failed'];
+        const validStages = ['transcribing', 'refining', 'completed', 'transcribing_failed', 'refining_failed', 'audio_unavailable'];
         if (!validStages.includes(entry.processingStage)) {
           errors.push('Entry processing stage is invalid');
         }
@@ -223,7 +223,7 @@ class DataValidationService {
       // Fix missing text (but allow empty if processing)
       const isProcessing = fixedEntry.processingStage === 'transcribing' || fixedEntry.processingStage === 'refining';
       if (typeof fixedEntry.text !== 'string') {
-        fixedEntry.text = isProcessing ? 'Processing...' : 'This entry was recovered from corrupted data.';
+        fixedEntry.text = isProcessing ? '' : 'This entry was recovered from corrupted data.';
       } else if (!fixedEntry.text && !isProcessing) {
         fixedEntry.text = 'This entry was recovered from corrupted data.';
       }
@@ -235,7 +235,7 @@ class DataValidationService {
 
       // Fix invalid processing stage
       if (fixedEntry.processingStage !== undefined) {
-        const validStages = ['transcribing', 'refining', 'completed', 'transcribing_failed', 'refining_failed'];
+        const validStages = ['transcribing', 'refining', 'completed', 'transcribing_failed', 'refining_failed', 'audio_unavailable'];
         if (!validStages.includes(fixedEntry.processingStage)) {
           fixedEntry.processingStage = 'completed';
         }

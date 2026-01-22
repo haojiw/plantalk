@@ -112,12 +112,11 @@ export const addEntry = async (
     });
 
     // Start transcription if needed
+    // Note: text and rawText start empty - UI uses processingStage to show status
     if (newEntry.audioUri && (!newEntry.text || newEntry.text.trim() === '')) {
-      newEntry.text = 'Processing...';
       newEntry.processingStage = 'transcribing';
       
       await databaseService.updateEntry(newEntry.id, {
-        text: 'Processing...',
         processingStage: 'transcribing'
       });
       

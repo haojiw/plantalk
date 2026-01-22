@@ -338,7 +338,7 @@ class DatabaseService {
    * @param stages - Array of processing stages to filter by
    * @returns Array of JournalEntry objects matching the specified stages
    */
-  async getEntriesByProcessingStage(stages: ('transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed')[]): Promise<JournalEntry[]> {
+  async getEntriesByProcessingStage(stages: ('transcribing' | 'refining' | 'completed' | 'transcribing_failed' | 'refining_failed' | 'audio_unavailable')[]): Promise<JournalEntry[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     try {

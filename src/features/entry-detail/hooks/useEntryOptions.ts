@@ -177,9 +177,8 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
           style: 'destructive',
           onPress: async () => {
             try {
-              // Update the entry to show it's processing
+              // Update the entry to show it's processing (no placeholder text)
               await updateEntry(entry.id, {
-                text: 'Re-transcribing...',
                 processingStage: 'transcribing'
               });
 
@@ -190,6 +189,56 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
             } catch (error) {
               console.error('Error starting re-transcription:', error);
               Alert.alert('Error', 'Failed to start re-transcription');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRefineText = async () => {
+    if (!entry) return;
+    
+    // Need rawText to refine
+    if (!entry.rawText || entry.rawText.trim() === '') {
+      Alert.alert('Error', 'No transcription available to refine');
+      return;
+    }
+
+    Alert.alert(
+      'Refine Text',
+      'This will re-format the transcription using AI. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Refine',
+          onPress: async () => {
+            try {
+              // Update the entry to show it's refining
+              updateEntryProgress(entry.id, 'refining');
+              
+              // Import and call text service directly
+              const { textService } = await import('@/core/services/ai/TextService');
+              const refined = await textService.refineTranscription(entry.rawText!);
+              
+              // Update with the refined result
+              updateEntryTranscription(entry.id, {
+                refinedTranscription: refined.formattedText,
+                rawTranscription: entry.rawText,
+                aiGeneratedTitle: refined.title,
+                processingStage: 'completed'
+              }, 'completed');
+              
+              Alert.alert('Success', 'Text refinement completed!');
+            } catch (error) {
+              console.error('Error refining text:', error);
+              updateEntryTranscription(entry.id, {
+                refinedTranscription: entry.rawText,
+                rawTranscription: entry.rawText,
+                aiGeneratedTitle: entry.title,
+                processingStage: 'refining_failed'
+              }, 'failed');
+              Alert.alert('Error', 'Failed to refine text. Please try again later.');
             }
           }
         }
@@ -256,53 +305,52 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
   const showOptions = () => {
     if (!entry) return;
 
+    // Check if refine option should be shown (need rawText available)
+    const canRefine = entry.rawText && entry.rawText.trim() !== '';
+
     // Show the main action sheet
     if (Platform.OS === 'ios') {
+      const options = [
+        'Cancel', 
+        'Edit Entry', 
+        'Change Date & Time', 
+        'Show Raw Transcription', 
+        ...(canRefine ? ['Refine Text'] : []),
+        'Re-transcribe Audio', 
+        'Download Audio'
+      ];
+
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: 'Entry Options',
-          options: [
-            'Cancel', 
-            'Edit Entry', 
-            'Change Date & Time', 
-            'Show Raw Transcription', 
-            'Re-transcribe Audio', 
-            'Download Audio'
-          ],
+          options,
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
-          switch (buttonIndex) {
-            case 1:
-              onEditEntry();
-              break;
-            case 2:
-              showDateTimePicker();
-              break;
-            case 3:
-              showRawTranscription();
-              break;
-            case 4:
-              handleRetranscribe();
-              break;
-            case 5:
-              handleDownloadAudio();
-              break;
-          }
+          // Dynamic index based on whether refine option is shown
+          if (buttonIndex === 1) onEditEntry();
+          else if (buttonIndex === 2) showDateTimePicker();
+          else if (buttonIndex === 3) showRawTranscription();
+          else if (canRefine && buttonIndex === 4) handleRefineText();
+          else if (buttonIndex === (canRefine ? 5 : 4)) handleRetranscribe();
+          else if (buttonIndex === (canRefine ? 6 : 5)) handleDownloadAudio();
         }
       );
     } else {
+      const alertOptions = [
+        { text: 'Cancel', style: 'cancel' as const },
+        { text: 'Edit Entry', onPress: onEditEntry },
+        { text: 'Change Date & Time', onPress: showDateTimePicker },
+        { text: 'Show Raw Transcription', onPress: showRawTranscription },
+        ...(canRefine ? [{ text: 'Refine Text', onPress: handleRefineText }] : []),
+        { text: 'Re-transcribe Audio', onPress: handleRetranscribe },
+        { text: 'Download Audio', onPress: handleDownloadAudio },
+      ];
+
       Alert.alert(
         'Entry Options',
         'What would you like to do?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Edit Entry', onPress: onEditEntry },
-          { text: 'Change Date & Time', onPress: showDateTimePicker },
-          { text: 'Show Raw Transcription', onPress: showRawTranscription },
-          { text: 'Re-transcribe Audio', onPress: handleRetranscribe },
-          { text: 'Download Audio', onPress: handleDownloadAudio },
-        ]
+        alertOptions
       );
     }
   };

@@ -1,5 +1,5 @@
 import { databaseService } from '@/core/services/storage';
-import { speechService } from './SpeechService';
+import { speechService, SpeechServiceFileError } from './SpeechService';
 import { textService } from './TextService';
 
 /**
@@ -23,7 +23,7 @@ interface TranscriptionResult {
   rawTranscription: string;
   refinedTranscription: string;
   aiGeneratedTitle: string;
-  processingStage?: 'transcribing' | 'refining' | 'transcribing_failed' | 'refining_failed' | 'completed';
+  processingStage?: 'transcribing' | 'refining' | 'transcribing_failed' | 'refining_failed' | 'completed' | 'audio_unavailable';
 }
 
 /**
@@ -174,14 +174,21 @@ class TranscriptionService {
         } catch (transcriptionError) {
           console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
           
+          // Check if it's a file-related error (not retryable)
+          const isFileError = transcriptionError instanceof SpeechServiceFileError;
+          const processingStage = isFileError ? 'audio_unavailable' : 'transcribing_failed';
+          const errorMessage = isFileError 
+            ? 'Audio file is unavailable or corrupted. Please record a new entry.'
+            : `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`;
+          
           // Handle transcription-specific failure
           task.onComplete(
             task.entryId, 
             {
               rawTranscription: '',
-              refinedTranscription: `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`,
+              refinedTranscription: errorMessage,
               aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-              processingStage: 'transcribing_failed'
+              processingStage
             }, 
             'failed',
           );
@@ -288,12 +295,12 @@ class TranscriptionService {
       for (const entry of pendingEntries) {
         // Skip entries without audio (shouldn't happen, but defensive coding)
         if (!entry.audioUri) {
-          console.warn(`[TranscriptionService] Watchdog: Entry ${entry.id} has no audioUri, marking as failed`);
+          console.warn(`[TranscriptionService] Watchdog: Entry ${entry.id} has no audioUri, marking as audio_unavailable`);
           onComplete(entry.id, {
             rawTranscription: '',
-            refinedTranscription: 'Processing failed: Audio file not found.',
+            refinedTranscription: 'Audio file is unavailable. Please record a new entry.',
             aiGeneratedTitle: entry.title || `Entry - ${new Date().toLocaleDateString()}`,
-            processingStage: 'transcribing_failed'
+            processingStage: 'audio_unavailable'
           }, 'failed');
           continue;
         }
