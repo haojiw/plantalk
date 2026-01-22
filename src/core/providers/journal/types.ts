@@ -28,8 +28,15 @@ export interface SecureJournalContextType {
       audioFiles: { status: string; details: string };
       backupSystem: { status: string; details: string };
       migration: { status: string; details: string };
+      schema: { status: string; details: string };
     };
     summary: string;
+  }>;
+  runSchemaMigration: () => Promise<{
+    success: boolean;
+    columnsAdded: string[];
+    columnsAlreadyExist: string[];
+    errors: string[];
   }>;
 }
 
@@ -42,8 +49,16 @@ export interface DiagnosticsResult {
     audioFiles: { status: string; details: string };
     backupSystem: { status: string; details: string };
     migration: { status: string; details: string };
+    schema: { status: string; details: string };
   };
   summary: string;
+}
+
+export interface SchemaMigrationResult {
+  success: boolean;
+  columnsAdded: string[];
+  columnsAlreadyExist: string[];
+  errors: string[];
 }
 
 export interface EmergencyRecoveryResult {

@@ -4,11 +4,11 @@ import { theme } from '@/styles/theme';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-export const AudioPathMigration: React.FC = () => {
-  const { state, isLoading: contextLoading, updateEntry, emergencyRecovery, runStorageDiagnostics } = useSecureJournal();
+export const DeveloperTools: React.FC = () => {
+  const { state, isLoading: contextLoading, updateEntry, runStorageDiagnostics, runSchemaMigration } = useSecureJournal();
   const [isMigrating, setIsMigrating] = useState(false);
-  const [isRecovering, setIsRecovering] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
+  const [isMigratingSchema, setIsMigratingSchema] = useState(false);
 
   const checkMigrationStatus = () => {
     const entriesWithAudio = state.entries.filter(entry => entry.audioUri);
@@ -107,48 +107,50 @@ export const AudioPathMigration: React.FC = () => {
     }
   };
 
-  const performEmergencyRecovery = async () => {
-    Alert.alert(
-      'Emergency Recovery',
-      'This will attempt to recover your entries from the old storage file (entries.json). Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Recover',
-          onPress: async () => {
-            setIsRecovering(true);
-            try {
-              const result = await emergencyRecovery();
-              
-              if (result.success) {
-                Alert.alert(
-                  'Recovery Successful ✅',
-                  `${result.message}\n\nYour entries should now be visible in the journal.`,
-                  [{ text: 'OK' }]
-                );
-              } else {
-                Alert.alert(
-                  'Recovery Failed',
-                  result.message,
-                  [{ text: 'OK' }]
-                );
-              }
-            } catch (error) {
-              Alert.alert(
-                'Recovery Error',
-                `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                [{ text: 'OK' }]
-              );
-            } finally {
-              setIsRecovering(false);
-            }
-          }
+  const performSchemaMigration = async () => {
+    setIsMigratingSchema(true);
+    try {
+      const result = await runSchemaMigration();
+      
+      if (result.success) {
+        if (result.columnsAdded.length > 0) {
+          Alert.alert(
+            'Schema Migration Complete ✅',
+            `Added columns: ${result.columnsAdded.join(', ')}\n\n` +
+            (result.columnsAlreadyExist.length > 0 
+              ? `Already existed: ${result.columnsAlreadyExist.join(', ')}`
+              : 'All required columns are now present.'),
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Schema Up to Date ✅',
+            `All required columns already exist:\n${result.columnsAlreadyExist.join(', ')}`,
+            [{ text: 'OK' }]
+          );
         }
-      ]
-    );
+      } else {
+        Alert.alert(
+          'Schema Migration Failed ❌',
+          `Errors:\n${result.errors.join('\n')}\n\n` +
+          (result.columnsAdded.length > 0 
+            ? `Columns added before failure: ${result.columnsAdded.join(', ')}`
+            : 'No columns were added.'),
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Schema Migration Error',
+        `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsMigratingSchema(false);
+    }
   };
 
-  const isDisabled = contextLoading || isMigrating || isRecovering || isDiagnosing;
+  const isDisabled = contextLoading || isMigrating || isDiagnosing || isMigratingSchema;
 
   return (
     <View style={styles.container}>
@@ -165,14 +167,14 @@ export const AudioPathMigration: React.FC = () => {
       </Pressable>
 
       <Pressable
-        style={[styles.button, styles.recoveryButton, isDisabled && styles.buttonDisabled]}
-        onPress={performEmergencyRecovery}
+        style={[styles.button, styles.schemaButton, isDisabled && styles.buttonDisabled]}
+        onPress={performSchemaMigration}
         disabled={isDisabled}
       >
-        {isRecovering ? (
+        {isMigratingSchema ? (
           <ActivityIndicator color={theme.colors.surface} />
         ) : (
-          <Text style={styles.buttonText}>Emergency Recovery</Text>
+          <Text style={styles.buttonText}>🗄️ Migrate DB Schema</Text>
         )}
       </Pressable>
       
@@ -207,8 +209,8 @@ const styles = StyleSheet.create({
   diagnosticButton: {
     backgroundColor: '#2563EB', // Blue color for diagnostic action
   },
-  recoveryButton: {
-    backgroundColor: '#800020', // Red color for emergency action
+  schemaButton: {
+    backgroundColor: '#7C3AED', // Purple color for schema migration
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -219,4 +221,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

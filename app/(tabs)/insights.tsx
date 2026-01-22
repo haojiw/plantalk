@@ -15,7 +15,7 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 
-import { AudioPathMigration } from '@/features/journal';
+import { DeveloperTools } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
@@ -144,7 +144,7 @@ export default function InsightsScreen() {
             'code-slash-outline',
             'Developer Tools',
             <View>
-              <AudioPathMigration />
+              <DeveloperTools />
             </View>
           )}
         </View>

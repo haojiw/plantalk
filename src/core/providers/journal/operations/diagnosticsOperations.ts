@@ -15,6 +15,7 @@ export const runStorageDiagnostics = async (): Promise<DiagnosticsResult> => {
     audioFiles: { status: '', details: '' },
     backupSystem: { status: '', details: '' },
     migration: { status: '', details: '' },
+    schema: { status: '', details: '' },
   };
 
   try {
@@ -170,6 +171,26 @@ export const runStorageDiagnostics = async (): Promise<DiagnosticsResult> => {
     } catch (error) {
       results.migration.status = '⚠️ Warning';
       results.migration.details = `Cannot check migration: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+
+    // 7. Database Schema Test
+    console.log('[Diagnostics] Checking database schema...');
+    try {
+      const requiredColumns = ['retryCount', 'externalJobId', 'lastError', 'backupText'];
+      const existingColumns = await databaseService.getTableColumns('entries');
+      
+      const missingColumns = requiredColumns.filter(col => !existingColumns.includes(col));
+      
+      if (missingColumns.length === 0) {
+        results.schema.status = '✅ Pass';
+        results.schema.details = `All required columns present (${requiredColumns.join(', ')})`;
+      } else {
+        results.schema.status = '❌ Fail';
+        results.schema.details = `Missing columns: ${missingColumns.join(', ')}. Run "Migrate DB Schema" to fix.`;
+      }
+    } catch (error) {
+      results.schema.status = '❌ Fail';
+      results.schema.details = `Cannot check schema: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
 
     // Generate summary

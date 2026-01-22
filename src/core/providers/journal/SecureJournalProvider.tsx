@@ -1,4 +1,5 @@
 import { transcriptionService } from '@/core/services/ai';
+import { databaseService } from '@/core/services/storage';
 import { JournalEntry, JournalState } from '@/shared/types';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { initializeServices } from './initialization/initializeServices';
@@ -8,7 +9,7 @@ import * as backupOps from './operations/backupOperations';
 import * as diagnosticsOps from './operations/diagnosticsOperations';
 import * as entryOps from './operations/entryOperations';
 import * as streakOps from './operations/streakOperations';
-import { SecureJournalContextType } from './types';
+import { SecureJournalContextType, SchemaMigrationResult } from './types';
 
 const SecureJournalContext = createContext<SecureJournalContextType | undefined>(undefined);
 
@@ -154,6 +155,14 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     return await diagnosticsOps.runStorageDiagnostics();
   };
 
+  const runSchemaMigration = async (): Promise<SchemaMigrationResult> => {
+    const result = await databaseService.runManualSchemaMigration();
+    if (result.success && result.columnsAdded.length > 0) {
+      await loadState(); // Reload state after schema changes
+    }
+    return result;
+  };
+
   const emergencyRecovery = async () => {
     const result = await emergencyRecoveryOp();
     if (result.success) {
@@ -181,6 +190,7 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     forceSync,
     emergencyRecovery,
     runStorageDiagnostics,
+    runSchemaMigration,
   };
 
   return (

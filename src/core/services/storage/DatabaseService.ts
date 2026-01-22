@@ -491,13 +491,13 @@ class DatabaseService {
       title: dbEntry.title,
       text,
       rawText,
-      audioUri: dbEntry.audioUri || undefined,
-      duration: dbEntry.duration || undefined,
+      audioUri: dbEntry.audioUri ?? undefined,
+      duration: dbEntry.duration ?? undefined,
       processingStage: dbEntry.processingStage as JournalEntry['processingStage'],
-      retryCount: dbEntry.retryCount || 0,
-      externalJobId: dbEntry.externalJobId || undefined,
-      lastError: dbEntry.lastError || undefined,
-      backupText: dbEntry.backupText || undefined,
+      retryCount: dbEntry.retryCount ?? 0,
+      externalJobId: dbEntry.externalJobId ?? undefined,
+      lastError: dbEntry.lastError ?? undefined,
+      backupText: dbEntry.backupText ?? undefined,
     };
   }
 
@@ -592,6 +592,93 @@ class DatabaseService {
       console.error('[DatabaseService] Health check failed:', error);
       return false;
     }
+  }
+
+  // Get column names for a table using PRAGMA table_info
+  async getTableColumns(tableName: string): Promise<string[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const results = await this.db.getAllAsync<{ name: string }>(
+        `PRAGMA table_info(${tableName})`
+      );
+      return results.map(row => row.name);
+    } catch (error) {
+      console.error(`[DatabaseService] Failed to get columns for table ${tableName}:`, error);
+      return [];
+    }
+  }
+
+  // Manual schema migration - adds missing columns to entries table
+  async runManualSchemaMigration(): Promise<{
+    success: boolean;
+    columnsAdded: string[];
+    columnsAlreadyExist: string[];
+    errors: string[];
+  }> {
+    if (!this.db) {
+      return {
+        success: false,
+        columnsAdded: [],
+        columnsAlreadyExist: [],
+        errors: ['Database not initialized']
+      };
+    }
+
+    const result = {
+      success: true,
+      columnsAdded: [] as string[],
+      columnsAlreadyExist: [] as string[],
+      errors: [] as string[]
+    };
+
+    // Define required columns with their SQL definitions
+    const requiredColumns: { name: string; definition: string }[] = [
+      { name: 'retryCount', definition: 'INTEGER DEFAULT 0' },
+      { name: 'externalJobId', definition: 'TEXT' },
+      { name: 'lastError', definition: 'TEXT' },
+      { name: 'backupText', definition: 'TEXT' },
+    ];
+
+    try {
+      // Get current columns
+      const existingColumns = await this.getTableColumns('entries');
+      console.log('[DatabaseService] Existing columns:', existingColumns);
+
+      for (const column of requiredColumns) {
+        if (existingColumns.includes(column.name)) {
+          result.columnsAlreadyExist.push(column.name);
+          console.log(`[DatabaseService] Column ${column.name} already exists`);
+        } else {
+          try {
+            await this.db.execAsync(
+              `ALTER TABLE entries ADD COLUMN ${column.name} ${column.definition};`
+            );
+            result.columnsAdded.push(column.name);
+            console.log(`[DatabaseService] Added column ${column.name}`);
+          } catch (alterError) {
+            const errorMsg = alterError instanceof Error ? alterError.message : String(alterError);
+            result.errors.push(`Failed to add ${column.name}: ${errorMsg}`);
+            result.success = false;
+            console.error(`[DatabaseService] Failed to add column ${column.name}:`, alterError);
+          }
+        }
+      }
+
+      // Update database version if we successfully added columns
+      if (result.columnsAdded.length > 0 && result.success) {
+        await this.db.execAsync(`PRAGMA user_version = ${DatabaseService.DB_VERSION}`);
+        console.log('[DatabaseService] Updated database version to', DatabaseService.DB_VERSION);
+      }
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      result.errors.push(`Migration failed: ${errorMsg}`);
+      result.success = false;
+      console.error('[DatabaseService] Manual schema migration failed:', error);
+    }
+
+    return result;
   }
 }
 

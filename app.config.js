@@ -94,7 +94,6 @@ export default {
       typedRoutes: true
     },
     extra: {
-      WHISPER_API_KEY: process.env.WHISPER_API_KEY,
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       ASSEMBLYAI_API_KEY: process.env.ASSEMBLYAI_API_KEY,
       eas: {
