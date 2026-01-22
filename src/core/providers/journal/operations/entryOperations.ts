@@ -230,20 +230,41 @@ export const updateEntryProgress = async (entryId: string, stage: 'transcribing'
 };
 
 /**
- * Queue an entry for retranscription
+ * Queue an entry for retranscription using "Clean Slate" strategy.
+ * 
+ * Two-Phase Commit:
+ * 1. Wipe existing data in DB (prevents zombie transcripts on crash)
+ * 2. Only then add to processing queue
  */
-export const retranscribeEntry = (
+export const retranscribeEntry = async (
   entry: JournalEntry,
   onProgress: (entryId: string, stage: 'transcribing' | 'refining') => void,
   onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => void
-): void => {
+): Promise<void> => {
   if (!entry.audioUri) {
     console.error('[entryOperations] Cannot retranscribe entry without audio');
-    return;
+    throw new Error('Cannot retranscribe entry without audio');
   }
 
-  console.log('[entryOperations] Adding entry to transcription queue:', entry.id);
+  console.log('[entryOperations] Starting Clean Slate retranscription for entry:', entry.id);
   
+  // Phase 1: The Wipe - Clear all transcription data in DB
+  // This ensures if app crashes, watchdog will find a clean entry
+  await databaseService.updateEntry(entry.id, {
+    text: '',
+    rawText: '',
+    title: 'Processing...',
+    processingStage: 'transcribing',
+    retryCount: 0,
+    externalJobId: undefined, // Clear any previous job ID
+    lastError: undefined,
+    // Note: Don't clear backupText - that's for manual refinement undo
+  });
+  
+  console.log('[entryOperations] Phase 1 complete: DB wiped for entry:', entry.id);
+  
+  // Phase 2: The Queue - Add to transcription queue
+  // Only runs if Phase 1 succeeds
   transcriptionService.addToQueue({
     entryId: entry.id,
     audioUri: entry.audioUri,
@@ -251,5 +272,7 @@ export const retranscribeEntry = (
     onProgress,
     onComplete,
   });
+  
+  console.log('[entryOperations] Phase 2 complete: Entry queued for transcription:', entry.id);
 };
 

@@ -177,13 +177,9 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
           style: 'destructive',
           onPress: async () => {
             try {
-              // Update the entry to show it's processing (no placeholder text)
-              await updateEntry(entry.id, {
-                processingStage: 'transcribing'
-              });
-
-              // Add to transcription queue via provider
-              retranscribeEntry(entry);
+              // Clean Slate retranscription - wipes DB then queues job
+              // This is now a single atomic operation that handles everything
+              await retranscribeEntry(entry);
               
               Alert.alert('Processing', 'Re-transcription started. This may take a moment.');
             } catch (error) {
@@ -207,13 +203,21 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
 
     Alert.alert(
       'Refine Text',
-      'This will re-format the transcription using AI. Continue?',
+      'This will re-format the transcription using AI. You can revert to the original later. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Refine',
           onPress: async () => {
             try {
+              // BACKUP FIRST: Save current text before AI modifies it
+              // This enables the "Undo" feature
+              const currentText = entry.text || entry.rawText || '';
+              if (currentText.trim()) {
+                await updateEntry(entry.id, { backupText: currentText });
+                console.log('[useEntryOptions] Backed up current text before refinement');
+              }
+              
               // Update the entry to show it's refining
               updateEntryProgress(entry.id, 'refining');
               
@@ -229,16 +233,52 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
                 processingStage: 'completed'
               }, 'completed');
               
-              Alert.alert('Success', 'Text refinement completed!');
+              Alert.alert('Success', 'Text refinement completed! You can revert to the original from the menu.');
             } catch (error) {
               console.error('Error refining text:', error);
+              // On failure, keep the current text but mark as failed
               updateEntryTranscription(entry.id, {
-                refinedTranscription: entry.rawText,
+                refinedTranscription: entry.text || entry.rawText,
                 rawTranscription: entry.rawText,
                 aiGeneratedTitle: entry.title,
                 processingStage: 'refining_failed'
               }, 'failed');
               Alert.alert('Error', 'Failed to refine text. Please try again later.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRevertText = async () => {
+    if (!entry) return;
+    
+    if (!entry.backupText || entry.backupText.trim() === '') {
+      Alert.alert('Error', 'No backup available to revert to');
+      return;
+    }
+
+    Alert.alert(
+      'Revert to Original',
+      'This will restore the previous version of the text. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revert',
+          onPress: async () => {
+            try {
+              // Restore backup text and clear the backup
+              await updateEntry(entry.id, {
+                text: entry.backupText,
+                backupText: undefined, // Clear after restore (single undo)
+                processingStage: 'completed'
+              });
+              
+              Alert.alert('Success', 'Text reverted to previous version.');
+            } catch (error) {
+              console.error('Error reverting text:', error);
+              Alert.alert('Error', 'Failed to revert text');
             }
           }
         }
@@ -307,33 +347,48 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
 
     // Check if refine option should be shown (need rawText available)
     const canRefine = entry.rawText && entry.rawText.trim() !== '';
+    // Check if revert option should be shown (need backupText available)
+    const canRevert = entry.backupText && entry.backupText.trim() !== '';
 
     // Show the main action sheet
     if (Platform.OS === 'ios') {
-      const options = [
-        'Cancel', 
-        'Edit Entry', 
-        'Change Date & Time', 
-        'Show Raw Transcription', 
-        ...(canRefine ? ['Refine Text'] : []),
-        'Re-transcribe Audio', 
-        'Download Audio'
-      ];
+      // Build options and handlers arrays in parallel for cleaner index mapping
+      const optionsList: string[] = ['Cancel'];
+      const handlers: (() => void)[] = [() => {}]; // Cancel does nothing
+      
+      optionsList.push('Edit Entry');
+      handlers.push(onEditEntry);
+      
+      optionsList.push('Change Date & Time');
+      handlers.push(showDateTimePicker);
+      
+      optionsList.push('Show Raw Transcription');
+      handlers.push(showRawTranscription);
+      
+      if (canRefine) {
+        optionsList.push('Refine Text');
+        handlers.push(handleRefineText);
+      }
+      
+      if (canRevert) {
+        optionsList.push('Revert to Original');
+        handlers.push(handleRevertText);
+      }
+      
+      optionsList.push('Re-transcribe Audio');
+      handlers.push(handleRetranscribe);
+      
+      optionsList.push('Download Audio');
+      handlers.push(handleDownloadAudio);
 
       ActionSheetIOS.showActionSheetWithOptions(
         {
           title: 'Entry Options',
-          options,
+          options: optionsList,
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
-          // Dynamic index based on whether refine option is shown
-          if (buttonIndex === 1) onEditEntry();
-          else if (buttonIndex === 2) showDateTimePicker();
-          else if (buttonIndex === 3) showRawTranscription();
-          else if (canRefine && buttonIndex === 4) handleRefineText();
-          else if (buttonIndex === (canRefine ? 5 : 4)) handleRetranscribe();
-          else if (buttonIndex === (canRefine ? 6 : 5)) handleDownloadAudio();
+          handlers[buttonIndex]?.();
         }
       );
     } else {
@@ -343,6 +398,7 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
         { text: 'Change Date & Time', onPress: showDateTimePicker },
         { text: 'Show Raw Transcription', onPress: showRawTranscription },
         ...(canRefine ? [{ text: 'Refine Text', onPress: handleRefineText }] : []),
+        ...(canRevert ? [{ text: 'Revert to Original', onPress: handleRevertText }] : []),
         { text: 'Re-transcribe Audio', onPress: handleRetranscribe },
         { text: 'Download Audio', onPress: handleDownloadAudio },
       ];

@@ -11,6 +11,10 @@ interface DatabaseEntry extends Omit<JournalEntry, 'id'> {
   createdAt: string;
   updatedAt: string;
   encrypted: boolean;
+  retryCount?: number;
+  externalJobId?: string;
+  lastError?: string;
+  backupText?: string;
 }
 
 interface DatabaseMetadata {
@@ -35,7 +39,7 @@ export interface TranscriptionOutboxEntry {
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private static readonly DB_NAME = 'plantalk.db';
-  private static readonly DB_VERSION = 1;
+  private static readonly DB_VERSION = 2; // Bumped for retryCount, externalJobId, lastError, backupText columns
 
   // Initialize database connection and create tables
   async initialize(): Promise<void> {
@@ -86,6 +90,10 @@ class DatabaseService {
           duration INTEGER,
           processingStage TEXT,
           encrypted BOOLEAN DEFAULT FALSE,
+          retryCount INTEGER DEFAULT 0,
+          externalJobId TEXT,
+          lastError TEXT,
+          backupText TEXT,
           createdAt TEXT NOT NULL,
           updatedAt TEXT NOT NULL,
           UNIQUE(entryId)
@@ -153,10 +161,36 @@ class DatabaseService {
       if (currentVersion < DatabaseService.DB_VERSION) {
         console.log(`[DatabaseService] Running migrations from version ${currentVersion} to ${DatabaseService.DB_VERSION}`);
         
-        // Add future migrations here
-        // if (currentVersion < 2) {
-        //   await this.db.execAsync('ALTER TABLE entries ADD COLUMN newColumn TEXT;');
-        // }
+        // Migration v1 -> v2: Add robust pipeline columns
+        if (currentVersion < 2) {
+          console.log('[DatabaseService] Migrating to v2: Adding retryCount, externalJobId, lastError, backupText columns');
+          
+          // Add columns one at a time (SQLite doesn't support multiple ADD COLUMN in one statement)
+          // Use try/catch for each since column may already exist from previous partial migration
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN retryCount INTEGER DEFAULT 0;');
+          } catch (e) {
+            console.log('[DatabaseService] retryCount column may already exist');
+          }
+          
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN externalJobId TEXT;');
+          } catch (e) {
+            console.log('[DatabaseService] externalJobId column may already exist');
+          }
+          
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN lastError TEXT;');
+          } catch (e) {
+            console.log('[DatabaseService] lastError column may already exist');
+          }
+          
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN backupText TEXT;');
+          } catch (e) {
+            console.log('[DatabaseService] backupText column may already exist');
+          }
+        }
 
         // Update database version
         await this.db.execAsync(`PRAGMA user_version = ${DatabaseService.DB_VERSION}`);
@@ -459,7 +493,11 @@ class DatabaseService {
       rawText,
       audioUri: dbEntry.audioUri || undefined,
       duration: dbEntry.duration || undefined,
-      processingStage: dbEntry.processingStage as JournalEntry['processingStage']
+      processingStage: dbEntry.processingStage as JournalEntry['processingStage'],
+      retryCount: dbEntry.retryCount || 0,
+      externalJobId: dbEntry.externalJobId || undefined,
+      lastError: dbEntry.lastError || undefined,
+      backupText: dbEntry.backupText || undefined,
     };
   }
 

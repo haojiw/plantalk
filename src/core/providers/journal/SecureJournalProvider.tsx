@@ -111,8 +111,9 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
       await loadState();
   };
 
-  const retranscribeEntry = (entry: JournalEntry) => {
-    entryOps.retranscribeEntry(entry, updateEntryProgress, updateEntryTranscription);
+  const retranscribeEntry = async (entry: JournalEntry): Promise<void> => {
+    await entryOps.retranscribeEntry(entry, updateEntryProgress, updateEntryTranscription);
+    await loadState(); // Refresh state after DB wipe
   };
 
   // Streak operations

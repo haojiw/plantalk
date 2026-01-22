@@ -128,14 +128,22 @@ class TranscriptionService {
   }
 
   /**
+   * Maximum number of retry attempts before permanently failing.
+   * "Three Strikes" rule - prevents infinite retry loops.
+   */
+  private static readonly MAX_RETRY_COUNT = 3;
+
+  /**
    * @brief Manages the full lifecycle of a single transcription task, processing in chunks.
    *
    * This method first transcribes audio to raw text (unless checkpointed rawText exists).
    * It then splits the text into manageable chunks, refines each chunk individually, 
    * and reassembles them into a final, polished transcription with a single title.
    * 
-   * Checkpointing: After STT completes, rawText is immediately saved to the database
-   * with processingStage='refining'. This ensures the expensive STT step is never repeated.
+   * Features:
+   * - Idempotency: Checks for existing externalJobId to resume without re-uploading
+   * - Checkpointing: Saves rawText immediately after STT completes
+   * - Three Strikes: Stops retrying after MAX_RETRY_COUNT attempts
    *
    * @private
    * @param task The individual transcription task to process.
@@ -155,7 +163,28 @@ class TranscriptionService {
         console.log(`[TranscriptionService] Starting AssemblyAI transcription...`);
         
         try {
-          rawTranscription = await speechService.transcribeAudio(task.audioUri, task.audioDurationSeconds);
+          // IDEMPOTENCY CHECK: Look up entry to see if we already have an external job ID
+          const entry = await databaseService.getEntry(task.entryId);
+          
+          if (entry?.externalJobId) {
+            // Resume polling for existing job (no re-upload needed - saves money!)
+            console.log(`[TranscriptionService] IDEMPOTENCY: Found existing job ID ${entry.externalJobId}, resuming polling...`);
+            rawTranscription = await speechService.resumeTranscription(entry.externalJobId);
+          } else {
+            // Fresh transcription - upload and create new job
+            console.log(`[TranscriptionService] No existing job ID, starting fresh transcription...`);
+            const result = await speechService.transcribeAudioWithId(task.audioUri, task.audioDurationSeconds);
+            
+            // SAVE JOB ID IMMEDIATELY for crash recovery
+            // This is a checkpoint - if we crash after this, we can resume without re-uploading
+            console.log(`[TranscriptionService] Saving external job ID: ${result.transcriptId}`);
+            await databaseService.updateEntry(task.entryId, {
+              externalJobId: result.transcriptId
+            });
+            
+            rawTranscription = result.text;
+          }
+          
           console.log(`[TranscriptionService] AssemblyAI completed. Raw text length: ${rawTranscription.length}`);
           
           if (!rawTranscription.trim()) {
@@ -163,36 +192,70 @@ class TranscriptionService {
           }
 
           // CHECKPOINT: Save rawText to database immediately after STT completes
-          // This ensures we never have to repeat the expensive STT step
-          console.log(`[TranscriptionService] Checkpointing: saving rawText to database...`);
+          // Also clear the externalJobId since STT is complete
+          console.log(`[TranscriptionService] Checkpointing: saving rawText and clearing job ID...`);
           await databaseService.updateEntry(task.entryId, {
             rawText: rawTranscription,
-            processingStage: 'refining'
+            processingStage: 'refining',
+            externalJobId: undefined, // Clear - STT complete, no longer needed
+            lastError: undefined // Clear any previous errors
           });
           console.log(`[TranscriptionService] Checkpoint saved successfully`);
 
         } catch (transcriptionError) {
           console.error(`[TranscriptionService] AssemblyAI transcription failed:`, transcriptionError);
           
-          // Check if it's a file-related error (not retryable)
+          // THREE STRIKES: Check retry count before giving up
+          const entry = await databaseService.getEntry(task.entryId);
+          const currentRetryCount = (entry?.retryCount || 0) + 1;
+          const errorMessage = transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error';
+          
+          // Update retry count and error in DB
+          await databaseService.updateEntry(task.entryId, {
+            retryCount: currentRetryCount,
+            lastError: errorMessage
+          });
+          
+          console.log(`[TranscriptionService] Retry count: ${currentRetryCount}/${TranscriptionService.MAX_RETRY_COUNT}`);
+          
+          // Check if it's a file-related error (not retryable at all)
           const isFileError = transcriptionError instanceof SpeechServiceFileError;
-          const processingStage = isFileError ? 'audio_unavailable' : 'transcribing_failed';
-          const errorMessage = isFileError 
-            ? 'Audio file is unavailable or corrupted. Please record a new entry.'
-            : `Transcription failed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Please try again.`;
           
-          // Handle transcription-specific failure
-          task.onComplete(
-            task.entryId, 
-            {
-              rawTranscription: '',
-              refinedTranscription: errorMessage,
-              aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
-              processingStage
-            }, 
-            'failed',
-          );
+          // Determine if we should give up
+          const shouldGiveUp = isFileError || currentRetryCount >= TranscriptionService.MAX_RETRY_COUNT;
           
+          if (shouldGiveUp) {
+            const processingStage = isFileError ? 'audio_unavailable' : 'transcribing_failed';
+            const userMessage = isFileError 
+              ? 'Audio file is unavailable or corrupted. Please record a new entry.'
+              : `Transcription failed after ${currentRetryCount} attempts. Please try re-recording.`;
+            
+            console.log(`[TranscriptionService] Giving up on entry ${task.entryId}: ${isFileError ? 'File error (not retryable)' : 'Max retries reached'}`);
+            
+            // Clean up and fail permanently
+            await databaseService.updateEntry(task.entryId, {
+              externalJobId: undefined // Clear job ID on permanent failure
+            });
+            
+            task.onComplete(
+              task.entryId, 
+              {
+                rawTranscription: '',
+                refinedTranscription: userMessage,
+                aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
+                processingStage
+              }, 
+              'failed',
+            );
+            
+            return;
+          }
+          
+          // Not giving up yet - leave in transcribing state for watchdog to retry
+          console.log(`[TranscriptionService] Entry ${task.entryId} will be retried by watchdog`);
+          
+          // Don't call onComplete - leave entry in transcribing state
+          // The watchdog will pick it up and retry later
           return;
         }
       } else {
@@ -232,6 +295,13 @@ class TranscriptionService {
       console.log(`[TranscriptionService] All chunks processed. Final text length: ${finalRefinedText.length}`);
 
       // Step 3: Return the complete, assembled result
+      // Clean up job tracking fields on successful completion
+      await databaseService.updateEntry(task.entryId, {
+        externalJobId: undefined,
+        lastError: undefined,
+        retryCount: 0 // Reset for potential future re-transcriptions
+      });
+      
       const finalResult: TranscriptionResult = {
         rawTranscription: rawTranscription,
         refinedTranscription: finalRefinedText,
@@ -251,7 +321,13 @@ class TranscriptionService {
         ? rawTranscription // If refinement fails, we still have the raw text
         : `Processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
 
-      //moved reuse here
+      // Save error info for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await databaseService.updateEntry(task.entryId, {
+        lastError: errorMessage,
+        externalJobId: undefined // Clean up on failure too
+      });
+
       task.onComplete(task.entryId, {
         rawTranscription: rawTranscription, // Will be empty if transcription failed
         refinedTranscription: fallbackText, // Use raw text or an error message as a fallback

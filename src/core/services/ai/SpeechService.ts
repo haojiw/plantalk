@@ -265,13 +265,51 @@ class SpeechService {
     throw new SpeechServiceNetworkError('Transcription timeout: took longer than 10 minutes', false);
   }
 
-  async transcribeAudio(audioUri: string, audioDurationSeconds?: number): Promise<string> {
+  /**
+   * Resume transcription polling for an existing job ID.
+   * Used for idempotent crash recovery - if we already uploaded audio and have a job ID,
+   * we can resume polling without re-uploading (saves money and time).
+   * 
+   * @param transcriptId - The AssemblyAI transcript ID to resume
+   * @returns The transcription text
+   */
+  async resumeTranscription(transcriptId: string): Promise<string> {
+    if (!this.apiKey) {
+      throw new SpeechServiceAPIError('AssemblyAI API key not configured');
+    }
+
+    console.log(`[SpeechService] Resuming transcription for ID: ${transcriptId}`);
+    
+    try {
+      const transcript = await this.pollTranscription(transcriptId);
+      
+      if (!transcript.text) {
+        throw new SpeechServiceAPIError('Transcription completed but returned no text');
+      }
+      
+      console.log(`[SpeechService] Resume transcription successful, length: ${transcript.text.length}`);
+      return transcript.text.trim();
+    } catch (error) {
+      console.error('[SpeechService] Error resuming transcription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transcribe audio and return both the transcript ID and text.
+   * The transcript ID can be saved for idempotent crash recovery.
+   * 
+   * @param audioUri - Path to the audio file
+   * @param audioDurationSeconds - Optional duration for timeout calculation
+   * @returns Object containing transcriptId and text
+   */
+  async transcribeAudioWithId(audioUri: string, audioDurationSeconds?: number): Promise<{ transcriptId: string; text: string }> {
     if (!this.apiKey) {
       throw new SpeechServiceAPIError('AssemblyAI API key not configured');
     }
 
     try {
-      console.log(`[SpeechService] Starting transcription for URI: ${audioUri}`);
+      console.log(`[SpeechService] Starting transcription with ID tracking for URI: ${audioUri}`);
       
       // Convert relative path to absolute path if needed
       const absoluteAudioUri = getAbsoluteAudioPath(audioUri);
@@ -290,69 +328,69 @@ class SpeechService {
       });
 
       if (!fileInfo.exists) {
-        // File missing - not retryable, user needs to re-record
         throw new SpeechServiceFileError('Audio file does not exist - may have been deleted');
       }
 
-      // Check file size if available
       const fileSize = (fileInfo as any).size;
       if (fileSize !== undefined && fileSize === 0) {
-        // Empty file - not retryable, recording failed
         throw new SpeechServiceFileError('Audio file is empty - recording may have failed');
       }
 
-      // Step 1: Upload audio file to AssemblyAI (streams from disk to avoid OOM)
+      // Step 1: Upload audio file to AssemblyAI
       const uploadUrl = await this.uploadAudio(absoluteAudioUri);
 
-      // Step 2: Create transcription job
+      // Step 2: Create transcription job - SAVE THIS ID FOR CRASH RECOVERY
       const transcriptId = await this.createTranscription(uploadUrl);
+      console.log(`[SpeechService] Transcription job created with ID: ${transcriptId}`);
 
       // Step 3: Poll until transcription is complete
       const transcript = await this.pollTranscription(transcriptId);
 
       if (!transcript.text) {
-        console.error(`[SpeechService] Transcription completed but no text found`);
         throw new SpeechServiceAPIError('Transcription completed but returned no text - audio may be silent or unintelligible');
       }
 
       console.log(`[SpeechService] Transcription successful, length: ${transcript.text.length}`);
-      console.log(`[SpeechService] Transcription: ${transcript.text.trim()}`);
-      return transcript.text.trim();
+      
+      return {
+        transcriptId,
+        text: transcript.text.trim()
+      };
       
     } catch (error) {
       console.error('[SpeechService] Error transcribing audio:', error);
       
-      // Re-throw our custom errors as-is (they have good messages)
+      // Re-throw our custom errors as-is
       if (error instanceof SpeechServiceFileError || 
           error instanceof SpeechServiceAPIError || 
           error instanceof SpeechServiceNetworkError) {
         throw error;
       }
       
-      // Enhanced error logging and wrapping for unknown errors
       if (error instanceof Error) {
         console.error('[SpeechService] Error details:', error.message);
         
         if (error.message.includes('400') || error.message.includes('format')) {
-          console.error('[SpeechService] Audio format issue detected. This could be:');
-          console.error('1. Unsupported audio format');
-          console.error('2. Corrupted audio file');
-          console.error('3. File too short');
-          console.error('4. Invalid audio encoding');
-          // Format errors are file-related and not retryable
           throw new SpeechServiceFileError(`Audio format error: ${error.message}`);
         }
         
-        // Check for network-related errors
         if (error.message.includes('network') || error.message.includes('Network') || 
             error.message.includes('timeout') || error.message.includes('connection')) {
           throw new SpeechServiceNetworkError(error.message, true);
         }
       }
       
-      // Wrap unknown errors
       throw new SpeechServiceAPIError(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Legacy method - transcribes audio and returns just the text.
+   * For new code, prefer transcribeAudioWithId for crash recovery support.
+   */
+  async transcribeAudio(audioUri: string, audioDurationSeconds?: number): Promise<string> {
+    const result = await this.transcribeAudioWithId(audioUri, audioDurationSeconds);
+    return result.text;
   }
 }
 

@@ -9,7 +9,7 @@ export interface SecureJournalContextType {
   updateEntry: (entryId: string, updates: Partial<JournalEntry>) => Promise<void>;
   updateEntryTranscription: (entryId: string, result: any, status: 'completed' | 'failed') => void;
   updateEntryProgress: (entryId: string, stage: 'transcribing' | 'refining') => void;
-  retranscribeEntry: (entry: JournalEntry) => void;
+  retranscribeEntry: (entry: JournalEntry) => Promise<void>;
   getDaysSinceLastEntry: () => number;
   resetStreak: () => void;
   // Secure storage specific methods

@@ -13,6 +13,12 @@ export interface JournalEntry {
       | 'transcribing_failed' 
       | 'refining_failed'
       | 'audio_unavailable'; // Audio file missing/corrupted - not retryable
+    
+    // Robust pipeline fields
+    retryCount?: number; // Tracks transcription retry attempts (max 3)
+    externalJobId?: string; // AssemblyAI job ID for idempotent resume
+    lastError?: string; // Last error message for debugging
+    backupText?: string; // Previous text version for manual refinement "Undo"
   }
   
   export interface JournalState {
