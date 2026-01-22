@@ -167,9 +167,27 @@ class TranscriptionService {
           const entry = await databaseService.getEntry(task.entryId);
           
           if (entry?.externalJobId) {
-            // Resume polling for existing job (no re-upload needed - saves money!)
-            console.log(`[TranscriptionService] IDEMPOTENCY: Found existing job ID ${entry.externalJobId}, resuming polling...`);
-            rawTranscription = await speechService.resumeTranscription(entry.externalJobId);
+            // Try to resume polling for existing job (saves money if it works!)
+            console.log(`[TranscriptionService] IDEMPOTENCY: Found existing job ID ${entry.externalJobId}, attempting to resume...`);
+            
+            try {
+              rawTranscription = await speechService.resumeTranscription(entry.externalJobId);
+              console.log(`[TranscriptionService] Successfully resumed from existing job ID`);
+            } catch (resumeError) {
+              // Stale job ID - clear it and fall through to fresh transcription
+              console.warn(`[TranscriptionService] Failed to resume job ${entry.externalJobId}, starting fresh:`, resumeError);
+              await databaseService.updateEntry(task.entryId, {
+                externalJobId: undefined
+              });
+              
+              // Fall through to fresh transcription below
+              const result = await speechService.transcribeAudioWithId(task.audioUri, task.audioDurationSeconds);
+              console.log(`[TranscriptionService] Saving new external job ID: ${result.transcriptId}`);
+              await databaseService.updateEntry(task.entryId, {
+                externalJobId: result.transcriptId
+              });
+              rawTranscription = result.text;
+            }
           } else {
             // Fresh transcription - upload and create new job
             console.log(`[TranscriptionService] No existing job ID, starting fresh transcription...`);
@@ -251,11 +269,26 @@ class TranscriptionService {
             return;
           }
           
-          // Not giving up yet - leave in transcribing state for watchdog to retry
-          console.log(`[TranscriptionService] Entry ${task.entryId} will be retried by watchdog`);
+          // Not giving up yet - mark as failed so user can manually retry
+          // (Don't rely on watchdog - it only runs at app startup)
+          console.log(`[TranscriptionService] Entry ${task.entryId} failed (attempt ${currentRetryCount}/${TranscriptionService.MAX_RETRY_COUNT}), user can retry`);
           
-          // Don't call onComplete - leave entry in transcribing state
-          // The watchdog will pick it up and retry later
+          // Clear the stale job ID so next attempt starts fresh
+          await databaseService.updateEntry(task.entryId, {
+            externalJobId: undefined
+          });
+          
+          task.onComplete(
+            task.entryId, 
+            {
+              rawTranscription: '',
+              refinedTranscription: `Transcription failed (attempt ${currentRetryCount}/${TranscriptionService.MAX_RETRY_COUNT}). Tap to retry.`,
+              aiGeneratedTitle: `Entry - ${new Date().toLocaleDateString()}`,
+              processingStage: 'transcribing_failed'
+            }, 
+            'failed',
+          );
+          
           return;
         }
       } else {
