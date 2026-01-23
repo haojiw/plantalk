@@ -107,17 +107,19 @@ export const EntryContent: React.FC<EntryContentProps> = ({
         </View>
       )}
 
-      {/* Refinement Failed Banner - Dismissible with retry */}
+      {/* Refinement Failed Banner - Improved messaging with retry */}
       {entry.processingStage === 'refining_failed' && showFailureBanner && (
         <View style={styles.failureBanner}>
           <View style={styles.failureBannerContent}>
-            <Ionicons name="alert-circle" size={14} color={theme.colors.accent} />
-            <Text style={styles.failureBannerText}>Formatting failed</Text>
+            <Ionicons name="sparkles-outline" size={14} color={theme.colors.accent} />
+            <Text style={styles.failureBannerText}>
+              AI refinement unavailable. Raw transcription preserved.
+            </Text>
           </View>
           <View style={styles.failureBannerActions}>
             <Pressable style={styles.retryBannerButton} onPress={onRetryRefinement}>
               <Ionicons name="refresh" size={12} color={theme.colors.primary} />
-              <Text style={styles.retryBannerButtonText}>Retry</Text>
+              <Text style={styles.retryBannerButtonText}>Refine</Text>
             </Pressable>
             <Pressable 
               style={styles.dismissButton} 

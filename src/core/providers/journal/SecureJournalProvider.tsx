@@ -117,6 +117,11 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     await loadState(); // Refresh state after DB wipe
   };
 
+  const refineEntry = async (entry: JournalEntry, backup = true): Promise<void> => {
+    await entryOps.refineEntry(entry, { backup }, updateEntryProgress, updateEntryTranscription);
+    await loadState(); // Refresh state after refinement
+  };
+
   // Streak operations
   const getDaysSinceLastEntry = (): number => {
     return entryOps.getDaysSinceLastEntry(state.lastEntryISO);
@@ -181,6 +186,7 @@ export const SecureJournalProvider: React.FC<SecureJournalProviderProps> = ({ ch
     updateEntryTranscription,
     updateEntryProgress,
     retranscribeEntry,
+    refineEntry,
     getDaysSinceLastEntry,
     resetStreak,
     performHealthCheck,

@@ -36,7 +36,7 @@ interface TranscriptionResult {
  * @param chunkSizeInWords The maximum number of words per chunk. Defaults to 800.
  * @returns An array of text chunks.
  */
-function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //split into chunkSizeInWords number of words
+export function chunkText(text: string, chunkSizeInWords: number = 800): string[] { //split into chunkSizeInWords number of words
   const words = text.split(/(\s+)/).filter(w => w.trim().length > 0);
   const chunks: string[] = [];
 
@@ -435,45 +435,6 @@ class TranscriptionService {
       console.log('[TranscriptionService] Watchdog: All pending tasks have been queued');
     } catch (error) {
       console.error('[TranscriptionService] Watchdog: Error resuming pending tasks:', error);
-    }
-  }
-
-  /**
-   * @brief Legacy method that generates a random mock transcription string for testing purposes.
-   *
-   * @private
-   * @returns A mock transcription string.
-   */
-  private generateMockTranscription(): string {
-    const mockTranscriptions = [
-      "Today I reflected on my journey and realized how much I've grown. The challenges I faced last week taught me valuable lessons about resilience and patience. I'm grateful for the small moments of joy that helped me through difficult times.",
-      "I had an interesting conversation with a friend today that made me think about what really matters in life. Sometimes the most meaningful discussions happen spontaneously, when we're just being present with each other.",
-      "The weather was beautiful this morning, and I took a moment to appreciate the changing seasons. There's something peaceful about watching nature's rhythms and feeling connected to something larger than myself.",
-      "I've been working on a new project that's both challenging and exciting. It's reminding me how much I enjoy learning new things and pushing beyond my comfort zone.",
-      "Spent some time journaling about my goals and dreams today. It's amazing how writing things down can help clarify what's truly important and what steps I want to take next."
-    ];
-    
-    return mockTranscriptions[Math.floor(Math.random() * mockTranscriptions.length)];
-  }
-
-  /**
-   * @brief legacy development utility to simulate processing a task with mock data.
-   *
-   * @param task A simplified task object for the mock process.
-   */
-  async addMockTranscriptionToQueue(task: Omit<TranscriptionTask, 'onProgress'> & { 
-    onComplete: (entryId: string, transcription: string, status: 'completed' | 'failed') => void 
-  }): Promise<void> {
-    try {
-      // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const mockText = this.generateMockTranscription();
-      task.onComplete(task.entryId, mockText, 'completed');
-
-    } catch (error) {
-      console.error('Mock transcription failed:', error);
-      task.onComplete(task.entryId, 'Mock transcription failed. Please try again.', 'failed');
     }
   }
 }

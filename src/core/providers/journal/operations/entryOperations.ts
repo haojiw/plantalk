@@ -1,4 +1,4 @@
-import { transcriptionService } from '@/core/services/ai';
+import { chunkText, textService, transcriptionService } from '@/core/services/ai';
 import { databaseService, dataValidationService } from '@/core/services/storage';
 import { JournalEntry, JournalState } from '@/shared/types';
 import { getAbsoluteAudioPath, getRelativeAudioPath } from '@/shared/utils';
@@ -276,3 +276,112 @@ export const retranscribeEntry = async (
   console.log('[entryOperations] Phase 2 complete: Entry queued for transcription:', entry.id);
 };
 
+/**
+ * Refine an entry's raw transcription using AI text processing.
+ * 
+ * This is the single source of truth for all refinement operations:
+ * - Auto-refinement after transcription (called via TranscriptionService)
+ * - Manual retry from failure banner
+ * - Manual refinement from entry options menu
+ * 
+ * Features:
+ * - Proper chunking for long text (matches TranscriptionService behavior)
+ * - Optional backup of current text before refinement
+ * - Graceful error handling that preserves raw text
+ */
+export const refineEntry = async (
+  entry: JournalEntry,
+  options: { backup?: boolean } = { backup: true },
+  onProgress: (entryId: string, stage: 'transcribing' | 'refining') => void,
+  onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => void
+): Promise<void> => {
+  // 1. Validate rawText exists
+  if (!entry.rawText || entry.rawText.trim() === '') {
+    console.error('[entryOperations] Cannot refine entry without raw text');
+    throw new Error('Cannot refine entry without raw text');
+  }
+
+  console.log('[entryOperations] Starting refinement for entry:', entry.id);
+  console.log('[entryOperations] Options:', options);
+
+  try {
+    // 2. Optionally backup current text before AI modifies it
+    if (options.backup) {
+      const currentText = entry.text || entry.rawText || '';
+      if (currentText.trim()) {
+        await databaseService.updateEntry(entry.id, { backupText: currentText });
+        console.log('[entryOperations] Backed up current text before refinement');
+      }
+    }
+
+    // 3. Update processingStage to 'refining'
+    await databaseService.updateEntry(entry.id, { processingStage: 'refining' });
+    onProgress(entry.id, 'refining');
+
+    // 4. Chunk text (reuse chunkText from TranscriptionService)
+    const chunks = chunkText(entry.rawText);
+    console.log(`[entryOperations] Processing ${chunks.length} chunks for refinement...`);
+
+    // 5. Process each chunk with textService
+    const refinedChunks: string[] = [];
+    let finalTitle = entry.title || `Entry - ${new Date().toLocaleDateString()}`;
+
+    for (let i = 0; i < chunks.length; i++) {
+      const isFirst = (i === 0);
+      console.log(`[entryOperations] Refining chunk ${i + 1} of ${chunks.length} (isFirst: ${isFirst})...`);
+
+      const result = await textService.refineTranscription(chunks[i], isFirst);
+
+      // Capture title from first chunk
+      if (isFirst && result.title) {
+        finalTitle = result.title;
+        console.log(`[entryOperations] Title captured: "${finalTitle}"`);
+      }
+
+      refinedChunks.push(result.formattedText);
+      console.log(`[entryOperations] Chunk ${i + 1} refinement complete.`);
+    }
+
+    // 6. Join and save result
+    const finalRefinedText = refinedChunks.join('\n\n');
+    console.log(`[entryOperations] All chunks processed. Final text length: ${finalRefinedText.length}`);
+
+    // Update database with refined result
+    await databaseService.updateEntry(entry.id, {
+      text: finalRefinedText,
+      title: finalTitle,
+      processingStage: 'completed',
+      lastError: undefined
+    });
+
+    // 7. Call completion callback
+    onComplete(entry.id, {
+      refinedTranscription: finalRefinedText,
+      rawTranscription: entry.rawText,
+      aiGeneratedTitle: finalTitle,
+      processingStage: 'completed'
+    }, 'completed');
+
+    console.log('[entryOperations] Refinement completed successfully for entry:', entry.id);
+
+  } catch (error) {
+    console.error('[entryOperations] Refinement failed:', error);
+
+    // Handle error gracefully - preserve raw text
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    await databaseService.updateEntry(entry.id, {
+      processingStage: 'refining_failed',
+      lastError: errorMessage,
+      // Keep text as rawText so content is still visible
+      text: entry.text || entry.rawText
+    });
+
+    onComplete(entry.id, {
+      refinedTranscription: entry.text || entry.rawText || '',
+      rawTranscription: entry.rawText,
+      aiGeneratedTitle: entry.title || `Entry - ${new Date().toLocaleDateString()}`,
+      processingStage: 'refining_failed'
+    }, 'failed');
+  }
+};

@@ -7,9 +7,8 @@ import { ActionSheetIOS, Alert, Platform } from 'react-native';
 export interface UseEntryOptionsProps {
   entry: JournalEntry | undefined;
   updateEntry: (id: string, updates: Partial<JournalEntry>) => Promise<void>;
-  updateEntryProgress: (id: string, stage: 'transcribing' | 'refining') => void;
-  updateEntryTranscription: (id: string, result: any, status: 'completed' | 'failed') => void;
   retranscribeEntry: (entry: JournalEntry) => void;
+  refineEntry: (entry: JournalEntry, backup?: boolean) => Promise<void>;
   onEditEntry: () => void;
 }
 
@@ -18,7 +17,7 @@ export interface UseEntryOptionsReturn {
   showRawTranscription: () => void;
 }
 
-export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updateEntryTranscription, retranscribeEntry, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
+export const useEntryOptions = ({ entry, updateEntry, retranscribeEntry, refineEntry, onEditEntry }: UseEntryOptionsProps): UseEntryOptionsReturn => {
   const updateEntryDate = async (newDate: Date) => {
     if (!entry) return;
     
@@ -210,39 +209,11 @@ export const useEntryOptions = ({ entry, updateEntry, updateEntryProgress, updat
           text: 'Refine',
           onPress: async () => {
             try {
-              // BACKUP FIRST: Save current text before AI modifies it
-              // This enables the "Undo" feature
-              const currentText = entry.text || entry.rawText || '';
-              if (currentText.trim()) {
-                await updateEntry(entry.id, { backupText: currentText });
-                console.log('[useEntryOptions] Backed up current text before refinement');
-              }
-              
-              // Update the entry to show it's refining
-              updateEntryProgress(entry.id, 'refining');
-              
-              // Import and call text service directly
-              const { textService } = await import('@/core/services/ai/TextService');
-              const refined = await textService.refineTranscription(entry.rawText!);
-              
-              // Update with the refined result
-              updateEntryTranscription(entry.id, {
-                refinedTranscription: refined.formattedText,
-                rawTranscription: entry.rawText,
-                aiGeneratedTitle: refined.title,
-                processingStage: 'completed'
-              }, 'completed');
-              
+              // Use consolidated refineEntry - with backup enabled for menu action
+              await refineEntry(entry, true);
               Alert.alert('Success', 'Text refinement completed! You can revert to the original from the menu.');
             } catch (error) {
               console.error('Error refining text:', error);
-              // On failure, keep the current text but mark as failed
-              updateEntryTranscription(entry.id, {
-                refinedTranscription: entry.text || entry.rawText,
-                rawTranscription: entry.rawText,
-                aiGeneratedTitle: entry.title,
-                processingStage: 'refining_failed'
-              }, 'failed');
               Alert.alert('Error', 'Failed to refine text. Please try again later.');
             }
           }

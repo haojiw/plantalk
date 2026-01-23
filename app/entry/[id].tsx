@@ -6,7 +6,6 @@ import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, Vie
 import Animated, { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
-import { transcriptionService } from '@/core/services/ai';
 import { AudioPlayer } from '@/features/audio-player';
 import { EntryContent, EntryDetailHeader, useDateRevealAnimation, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
 import { ScreenWrapper } from '@/shared/components';
@@ -15,7 +14,7 @@ import { theme } from '@/styles/theme';
 export default function EntryDetailScreen() {
   // 1. Get entry and context functions
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, updateEntry, updateEntryProgress, updateEntryTranscription, retranscribeEntry } = useSecureJournal();
+  const { state, updateEntry, retranscribeEntry, refineEntry } = useSecureJournal();
   const entry = state.entries.find(e => e.id === id);
 
   // 2. Initialize all hooks
@@ -36,9 +35,8 @@ export default function EntryDetailScreen() {
   const { showOptions } = useEntryOptions({ 
     entry, 
     updateEntry,
-    updateEntryProgress,
-    updateEntryTranscription,
     retranscribeEntry,
+    refineEntry,
     onEditEntry: handleEditEntry 
   });
 
@@ -83,34 +81,8 @@ export default function EntryDetailScreen() {
     if (!entry?.audioUri) return;
 
     try {
-      // Update the entry to show it's processing again
-      updateEntryProgress(entry.id, 'transcribing');
-      
-      // Start the transcription process again
-      transcriptionService.addToQueue({
-        entryId: entry.id,
-        audioUri: entry.audioUri,
-        audioDurationSeconds: entry.duration,
-        onProgress: (entryId: string, stage: 'transcribing' | 'refining') => {
-          updateEntryProgress(entryId, stage);
-        },
-        onComplete: (entryId: string, result: any, status: 'completed' | 'failed') => {
-          if (status === 'completed') {
-            updateEntryTranscription(entryId, {
-              ...result,
-              processingStage: result.processingStage || 'completed'
-            }, status);
-          } else {
-            updateEntryTranscription(entryId, {
-              refinedTranscription: result.refinedTranscription || 'Transcription failed. Please try again.',
-              rawTranscription: result.rawTranscription || '',
-              aiGeneratedTitle: result.aiGeneratedTitle || `Entry - ${new Date().toLocaleDateString()}`,
-              processingStage: result.processingStage || 'transcribing_failed'
-            }, status);
-          }
-        }
-      });
-      
+      // Use consolidated "clean slate" retranscription that properly resets state
+      await retranscribeEntry(entry);
       Alert.alert('Retry Started', 'We\'re processing your audio again. This may take a few moments.');
     } catch (error) {
       console.error('Error retrying transcription:', error);
@@ -122,23 +94,8 @@ export default function EntryDetailScreen() {
     if (!entry?.rawText) return;
 
     try {
-      // Update the entry to show it's refining again
-      updateEntryProgress(entry.id, 'refining');
-      
-      // We'll simulate calling just the refinement part
-      // Since we already have raw text, we just need to refine it
-      const { textService } = await import('@/core/services/ai/TextService');
-      
-      const refined = await textService.refineTranscription(entry.rawText);
-      
-      // Update with the refined result
-      updateEntryTranscription(entry.id, {
-        refinedTranscription: refined.formattedText,
-        rawTranscription: entry.rawText,
-        aiGeneratedTitle: refined.title,
-        processingStage: 'completed'
-      }, 'completed');
-      
+      // Use consolidated refineEntry - no backup for retry (already have the text)
+      await refineEntry(entry, false);
       Alert.alert('Success', 'Text refinement completed!');
     } catch (error) {
       console.error('Error retrying refinement:', error);
