@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: '600',
     marginBottom: theme.spacing.xs,
+    textAlign: 'center',
   },
   cardsContainer: {
     paddingHorizontal: theme.spacing.lg,

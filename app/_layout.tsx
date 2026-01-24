@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 SplashScreen.preventAutoHideAsync();
 
 import { SecureJournalProvider } from '@/core/providers/journal';
+import { SettingsProvider } from '@/core/providers/settings';
 import {
   DMSans_400Regular,
   DMSans_500Medium,
@@ -171,42 +172,44 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <SecureJournalProvider>
-          <Stack screenOptions={{ 
-            headerShown: false,
-            animation: 'fade',
-            animationDuration: 250,
-            animationTypeForReplace: 'push',
-          }}>
-            {/* Tabs as the primary navigation */}
-            <Stack.Screen 
-              name="(tabs)" 
-              options={{ 
-                headerShown: false,
-                animation: 'fade',
-                animationDuration: 250,
-              }} 
-            />
-            {/* Modal and detailed screens outside tabs */}
-            <Stack.Screen 
-              name="record" 
-              options={{ 
-                animation: 'fade',
-                animationDuration: 300,
-                headerShown: false,
-              }} 
-            />
-            <Stack.Screen 
-              name="entry/[id]" 
-              options={{ 
-                headerShown: false,
-                animation: 'default',
-                animationDuration: 250,
-              }} 
-            />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-        </SecureJournalProvider>
+        <SettingsProvider>
+          <SecureJournalProvider>
+            <Stack screenOptions={{ 
+              headerShown: false,
+              animation: 'fade',
+              animationDuration: 250,
+              animationTypeForReplace: 'push',
+            }}>
+              {/* Drawer containing tabs as the primary navigation */}
+              <Stack.Screen 
+                name="(drawer)" 
+                options={{ 
+                  headerShown: false,
+                  animation: 'fade',
+                  animationDuration: 250,
+                }} 
+              />
+              {/* Modal and detailed screens outside drawer */}
+              <Stack.Screen 
+                name="record" 
+                options={{ 
+                  animation: 'fade',
+                  animationDuration: 300,
+                  headerShown: false,
+                }} 
+              />
+              <Stack.Screen 
+                name="entry/[id]" 
+                options={{ 
+                  headerShown: false,
+                  animation: 'default',
+                  animationDuration: 250,
+                }} 
+              />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </SecureJournalProvider>
+        </SettingsProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

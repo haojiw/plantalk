@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -9,12 +11,28 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { useSecureJournal } from '@/core/providers/journal';
+import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
+const ILLUSTRATIONS: Record<string, any> = {
+  dino: require('@assets/images/dino.png'),
+  tree: require('@assets/images/tree.png'),
+  bush: require('@assets/images/bush.png'),
+  bonsai: require('@assets/images/bonsai.png'),
+  doodle: require('@assets/images/doodle.png'),
+};
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function EntryScreen() {
-  const { state } = useSecureJournal();
+  const navigation = useNavigation();
+  const { settings } = useSettings();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -26,6 +44,12 @@ export default function EntryScreen() {
       };
     }, [])
   );
+
+  const greeting = useMemo(() => getGreeting(), []);
+
+  const handleMenuPress = () => {
+    navigation.dispatch(DrawerActions.openDrawer());
+  };
 
   // Handle plant press - animate and open record modal
   const handlePlantPress = () => {
@@ -50,12 +74,19 @@ export default function EntryScreen() {
     opacity: opacity.value,
   }));
 
+  const illustrationSource = ILLUSTRATIONS[settings.mainIllustration] || ILLUSTRATIONS.dino;
+
   return (
     <ScreenWrapper>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
+        {/* Menu Button */}
+        <Pressable style={styles.menuButton} onPress={handleMenuPress}>
+          <Ionicons name="menu" size={24} color={theme.colors.text} />
+        </Pressable>
+
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Good morning Haoji</Text>
+          <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
           <Text style={styles.streakText}>Start your journey today</Text>
         </View>
 
@@ -65,7 +96,7 @@ export default function EntryScreen() {
             <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
               <View style={styles.plantCard}>
                 <Image
-                  source={require('@assets/images/dino.png')}
+                  source={illustrationSource}
                   style={styles.plantImage}
                   contentFit="contain"
                 />
@@ -82,6 +113,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
+  },
+  menuButton: {
+    position: 'absolute',
+    top: theme.spacing.md,
+    left: theme.spacing.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    ...theme.shadows.sm,
   },
   header: {
     alignItems: 'center',
@@ -122,4 +166,4 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
-}); 
+});
