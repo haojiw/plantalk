@@ -138,7 +138,7 @@ export default function RootLayout() {
         const imageAssets = cacheImages([
           // Images
           require('@assets/images/icon.png'),
-          require('@assets/images/tree.png'),
+          require('@assets/images/dino.png'),
           // Textures
           require('@assets/texture/noise_overlay.webp'),
           require('@assets/texture/paper.jpg'),

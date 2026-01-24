@@ -101,14 +101,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typography.heading,
+    fontSize: 17,
     color: theme.colors.text,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   sectionCard: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
     ...theme.shadows.sm,
     overflow: 'hidden',
     zIndex: 1,

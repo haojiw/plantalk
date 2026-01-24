@@ -46,7 +46,7 @@ export const theme = {
     surface: '#F2EDDB',      // Warm cream background F2EDDB E7E2C2
     text: '#2F4A34',         // Dark green text 243C2E
     accent: '#F0C274',       // Golden yellow accent
-    secondary: '#90B494',    // Medium green
+    secondary: '#538c63',    // Medium green
     light: '#C5D6C7',        // Light green
     background: '#F5F3E8',   // Slightly warmer than surface
     border: '#D4CDB1',       // Subtle border color

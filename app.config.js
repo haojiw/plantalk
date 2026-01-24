@@ -11,7 +11,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/tree.png",
+      image: "./assets/images/dino.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
@@ -59,7 +59,7 @@ export default {
       [
         "expo-splash-screen",
         {
-          image: "./assets/images/tree.png",
+          image: "./assets/images/dino.png",
           imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#F5F3E8"
@@ -78,7 +78,7 @@ export default {
         "expo-asset",
         {
           images: [
-            "./assets/images/tree.png",
+            "./assets/images/dino.png",
             "./assets/images/icon.png",
           ]
         }

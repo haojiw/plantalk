@@ -55,7 +55,7 @@ export default function RecordScreen() {
                 <Ionicons name="pause" size={28} color={theme.colors.surface} />
               </Pressable>
               <Pressable onPress={handleFinishRecording} style={styles.finishButton}>
-                <Ionicons name="checkmark" size={28} color={theme.colors.surface} />
+                <Ionicons name="checkmark-sharp" size={32} color={theme.colors.surface} />
               </Pressable>
             </View>
           )}
@@ -66,7 +66,7 @@ export default function RecordScreen() {
                 <Ionicons name="play" size={28} color={theme.colors.surface} />
               </Pressable>
               <Pressable onPress={handleFinishRecording} style={styles.finishButton}>
-                <Ionicons name="checkmark" size={28} color={theme.colors.surface} />
+                <Ionicons name="checkmark-sharp" size={32} color={theme.colors.surface} />
               </Pressable>
             </View>
           )}
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: theme.colors.primary, // Green for pause
+    backgroundColor: theme.colors.secondary, // Green for pause
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.md,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: theme.colors.primary, // Green for finish
+    backgroundColor: theme.colors.secondary, // Green for finish
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadows.md,

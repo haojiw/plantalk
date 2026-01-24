@@ -113,7 +113,7 @@ export const EntryContent: React.FC<EntryContentProps> = ({
           <View style={styles.failureBannerContent}>
             <Ionicons name="sparkles-outline" size={14} color={theme.colors.accent} />
             <Text style={styles.failureBannerText}>
-              AI refinement unavailable. Raw transcription preserved.
+              Refinement failed. Retry?
             </Text>
           </View>
           <View style={styles.failureBannerActions}>
