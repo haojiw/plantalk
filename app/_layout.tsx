@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 SplashScreen.preventAutoHideAsync();
 
 import { SecureJournalProvider } from '@/core/providers/journal';
-import { SettingsProvider } from '@/core/providers/settings';
+import { SettingsProvider, useSettings } from '@/core/providers/settings';
 import {
   DMSans_400Regular,
   DMSans_500Medium,
@@ -87,9 +87,10 @@ function cacheImages(images: (string | number)[]) {
   });
 }
 
-export default function RootLayout() {
+function RootLayoutNav() {
+  const { isLoading: settingsLoading, effectiveTheme } = useSettings();
   const [imagesLoaded, setImagesLoaded] = useState(false);
-  const [loaded] = useFonts({
+  const [fontsLoaded] = useFonts({
     SpaceMono: require('@assets/fonts/SpaceMono-Regular.ttf'),
     Dyslexic: require('@assets/fonts/OpenDyslexic-Regular.otf'),
 
@@ -157,57 +158,74 @@ export default function RootLayout() {
     loadImagesAsync();
   }, []);
 
-  // Hide splash screen when both fonts and images are loaded
+  // Hide splash screen when fonts, images, AND settings are loaded
   useEffect(() => {
-    if (loaded && imagesLoaded) {
+    if (fontsLoaded && imagesLoaded && !settingsLoading) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, imagesLoaded]);
+  }, [fontsLoaded, imagesLoaded, settingsLoading]);
 
   // Show splash screen while loading
-  if (!loaded || !imagesLoaded) {
+  if (!fontsLoaded || !imagesLoaded || settingsLoading) {
     return null;
   }
 
+  return (
+    <Stack screenOptions={{ 
+      headerShown: false,
+      animation: 'fade',
+      animationDuration: 250,
+      animationTypeForReplace: 'push',
+      contentStyle: { 
+        backgroundColor: effectiveTheme === 'dark' ? '#1a1a1a' : '#F5F3E8' 
+      },
+    }}>
+      {/* Tabs as the primary navigation */}
+      <Stack.Screen 
+        name="(tabs)" 
+        options={{ 
+          headerShown: false,
+          animation: 'fade',
+          animationDuration: 250,
+        }} 
+      />
+      {/* Modal and detailed screens */}
+      <Stack.Screen 
+        name="record" 
+        options={{ 
+          animation: 'fade',
+          animationDuration: 300,
+          headerShown: false,
+        }} 
+      />
+      <Stack.Screen 
+        name="entry/[id]" 
+        options={{ 
+          headerShown: false,
+          animation: 'default',
+          animationDuration: 250,
+        }} 
+      />
+      {/* Settings screens */}
+      <Stack.Screen 
+        name="settings" 
+        options={{ 
+          headerShown: false,
+          animation: 'default',
+        }} 
+      />
+      <Stack.Screen name="+not-found" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SettingsProvider>
           <SecureJournalProvider>
-            <Stack screenOptions={{ 
-              headerShown: false,
-              animation: 'fade',
-              animationDuration: 250,
-              animationTypeForReplace: 'push',
-            }}>
-              {/* Drawer containing tabs as the primary navigation */}
-              <Stack.Screen 
-                name="(drawer)" 
-                options={{ 
-                  headerShown: false,
-                  animation: 'fade',
-                  animationDuration: 250,
-                }} 
-              />
-              {/* Modal and detailed screens outside drawer */}
-              <Stack.Screen 
-                name="record" 
-                options={{ 
-                  animation: 'fade',
-                  animationDuration: 300,
-                  headerShown: false,
-                }} 
-              />
-              <Stack.Screen 
-                name="entry/[id]" 
-                options={{ 
-                  headerShown: false,
-                  animation: 'default',
-                  animationDuration: 250,
-                }} 
-              />
-              <Stack.Screen name="+not-found" />
-            </Stack>
+            <RootLayoutNav />
           </SecureJournalProvider>
         </SettingsProvider>
       </SafeAreaProvider>

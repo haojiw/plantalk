@@ -168,6 +168,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...theme.typography.title,
     color: theme.colors.text,
+    fontSize: 18,
     fontWeight: '600',
   },
 });

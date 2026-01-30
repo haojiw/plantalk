@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
@@ -31,7 +30,6 @@ function getGreeting(): string {
 }
 
 export default function EntryScreen() {
-  const navigation = useNavigation();
   const { settings } = useSettings();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
@@ -46,10 +44,6 @@ export default function EntryScreen() {
   );
 
   const greeting = useMemo(() => getGreeting(), []);
-
-  const handleMenuPress = () => {
-    navigation.dispatch(DrawerActions.openDrawer());
-  };
 
   // Handle plant press - animate and open record modal
   const handlePlantPress = () => {
@@ -79,11 +73,6 @@ export default function EntryScreen() {
   return (
     <ScreenWrapper>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
-        {/* Menu Button */}
-        <Pressable style={styles.menuButton} onPress={handleMenuPress}>
-          <Ionicons name="menu" size={24} color={theme.colors.text} />
-        </Pressable>
-
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
@@ -113,19 +102,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'space-between',
-  },
-  menuButton: {
-    position: 'absolute',
-    top: theme.spacing.md,
-    left: theme.spacing.md,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-    ...theme.shadows.sm,
   },
   header: {
     alignItems: 'center',

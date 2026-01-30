@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerContentComponentProps } from '@react-navigation/drawer';
 import Constants from 'expo-constants';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -19,12 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { useSettings } from '@/core/providers/settings';
+import { SettingsRow, SettingsSection } from '@/features/settings';
 import { theme } from '@/styles/theme';
-
-import { SettingsHeader } from './SettingsHeader';
-import { SettingsRow } from './SettingsRow';
-import { SettingsSection } from './SettingsSection';
-import { importAudioFile } from '../utils/importAudio';
 
 const THEME_LABELS: Record<string, string> = {
   light: 'Light',
@@ -45,26 +41,18 @@ const LANGUAGE_LABELS: Record<string, string> = {
   ar: 'العربية',
 };
 
-export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
-  navigation,
-}) => {
+export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { settings, setTheme, setWeeklyRecapEnabled } = useSettings();
+  const { settings, setTheme } = useSettings();
   const { state, addEntry } = useSecureJournal();
   const [isExporting, setIsExporting] = useState(false);
+  const isImportingRef = useRef(false);
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   const buildNumber = Constants.expoConfig?.ios?.buildNumber ?? '1';
 
-  const closeDrawer = () => {
-    navigation.closeDrawer();
-  };
-
   const navigateTo = (screen: string) => {
-    closeDrawer();
-    setTimeout(() => {
-      router.push(`/settings/${screen}` as any);
-    }, 300);
+    router.push(`/settings/${screen}` as any);
   };
 
   const cycleTheme = async () => {
@@ -76,9 +64,46 @@ export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
   };
 
   const handleImportRecording = async () => {
+    // Use ref for synchronous guard - prevents double-tap race condition
+    if (isImportingRef.current) return;
+    isImportingRef.current = true;
+    
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeDrawer();
-    await importAudioFile(addEntry);
+    
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        
+        await addEntry({
+          date: new Date().toISOString(),
+          title: 'Processing...',
+          text: '',
+          rawText: '',
+          duration: undefined,
+          audioUri: asset.uri,
+          processingStage: 'transcribing',
+        });
+        
+        Alert.alert(
+          'Audio Added',
+          `Processing ${asset.name || 'audio file'}. Transcription will complete in a few moments.`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error importing audio:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', 'Failed to import audio file');
+    } finally {
+      isImportingRef.current = false;
+    }
   };
 
   const handleExportJournal = async () => {
@@ -130,7 +155,6 @@ export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
 
   const handleRateApp = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Placeholder - replace with actual App Store URL
     Alert.alert('Rate App', 'This will open the App Store review page.');
   };
 
@@ -141,27 +165,22 @@ export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Close Button */}
-      <Pressable style={styles.closeButton} onPress={closeDrawer}>
-        <Ionicons name="close" size={24} color={theme.colors.text} />
-      </Pressable>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+        </Pressable>
+        <Text style={styles.title}>Settings</Text>
+        <View style={styles.placeholder} />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Avatar and Name */}
-        <SettingsHeader />
-
         {/* Account Section */}
         <SettingsSection title="Account">
-          <SettingsRow
-            type="navigate"
-            icon="person-outline"
-            label="Profile"
-            onPress={() => navigateTo('profile')}
-          />
           <SettingsRow
             type="navigate"
             icon="card-outline"
@@ -245,6 +264,16 @@ export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
           />
         </SettingsSection>
 
+        {/* Developer Section */}
+        <SettingsSection title="Developer">
+          <SettingsRow
+            type="navigate"
+            icon="code-slash-outline"
+            label="Developer Tools"
+            onPress={() => navigateTo('developer')}
+          />
+        </SettingsSection>
+
         {/* Version Footer */}
         <View style={styles.footer}>
           <Text style={styles.versionText}>
@@ -254,25 +283,31 @@ export const CustomDrawerContent: React.FC<DrawerContentComponentProps> = ({
       </ScrollView>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 60,
-    right: 16,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.surface,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    ...theme.shadows.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  backButton: {
+    padding: theme.spacing.xs,
+  },
+  title: {
+    ...theme.typography.heading,
+    color: theme.colors.text,
+  },
+  placeholder: {
+    width: 32,
   },
   scrollView: {
     flex: 1,

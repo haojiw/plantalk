@@ -96,9 +96,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="insights"
+        name="me"
         options={{
-          title: 'Insights',
+          title: 'Me',
           tabBarIcon: ({ color, focused }) => (
             <View style={{
               width: 60,
@@ -109,7 +109,7 @@ export default function TabLayout() {
               alignItems: 'center',
             }}>
               <Ionicons 
-                name={focused ? 'sparkles' : 'sparkles-outline'} 
+                name={focused ? 'person' : 'person-outline'} 
                 size={24} 
                 color={focused ? theme.colors.primary : color} 
               />
@@ -119,4 +119,4 @@ export default function TabLayout() {
       />
     </Tabs>
   );
-} 
+}
