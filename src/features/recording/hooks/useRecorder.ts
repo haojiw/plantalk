@@ -267,7 +267,7 @@ export const useRecorder = (): UseRecorderReturn => {
       });
       
       // Navigate to history to show the new entry
-      router.replace('/(drawer)/(tabs)/journal');
+      router.replace('/(tabs)/journal');
     } catch (error) {
       console.error('Error finishing recording:', error);
       setRecordingState('error');

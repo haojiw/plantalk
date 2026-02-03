@@ -173,9 +173,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ 
       headerShown: false,
-      animation: 'fade',
-      animationDuration: 250,
-      animationTypeForReplace: 'push',
+      animation: 'none',
       contentStyle: { 
         backgroundColor: effectiveTheme === 'dark' ? '#1a1a1a' : '#F5F3E8' 
       },
@@ -185,16 +183,12 @@ function RootLayoutNav() {
         name="(tabs)" 
         options={{ 
           headerShown: false,
-          animation: 'fade',
-          animationDuration: 250,
         }} 
       />
       {/* Modal and detailed screens */}
       <Stack.Screen 
         name="record" 
         options={{ 
-          animation: 'fade',
-          animationDuration: 300,
           headerShown: false,
         }} 
       />
@@ -202,8 +196,6 @@ function RootLayoutNav() {
         name="entry/[id]" 
         options={{ 
           headerShown: false,
-          animation: 'default',
-          animationDuration: 250,
         }} 
       />
       {/* Settings screens */}
@@ -211,7 +203,6 @@ function RootLayoutNav() {
         name="settings" 
         options={{ 
           headerShown: false,
-          animation: 'default',
         }} 
       />
       <Stack.Screen name="+not-found" />
