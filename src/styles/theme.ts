@@ -1,18 +1,17 @@
 // Font families - change these to experiment with different fonts
 const fonts = {
   // Primary fonts for main content
-  heading: 'Merriweather',     // Used for titles and headings in all screens.
-  body: 'Inter',                // Used for body, caption, and small text throughout the app.
-  bodyBold: 'Karla_700Bold',               // Used for subheadings and entry titles.
-
+  heading: 'Lora',               // Elegant serif for dark theme
+  body: 'DMSans_400Regular',     // Clean sans for body text
+  bodyBold: 'DMSans_700Bold',    // Bold variant for subheadings
 
   // Secondary fonts
-  body2: 'Karla',
+  body2: 'Manrope',
   body3: 'Manrope',
 
   // Utility fonts
   monospace: 'SpaceMono',                  // For code, numbers, timestamps in recording screen
-  handwriting: 'Pangolin',
+  handwriting: 'PatrickHand',              // Casual handwriting feel
 
   // alternatives:
 
@@ -40,15 +39,15 @@ const fonts = {
 } as const;
 
 const baseColors = {
-  primary: '#3A7A4C',      // Deep forest green
-  surface: '#F2EDDB',      // Warm cream background
-  text: '#2F4A34',         // Dark green text
-  accent: '#F0C274',       // Golden yellow accent
-  secondary: '#538c63',    // Medium green
-  light: '#C5D6C7',        // Light green
-  background: '#F5F3E8',   // Slightly warmer than surface
-  border: '#D4CDB1',       // Subtle border color
-  overlay: '#00000020',    // Subtle overlay
+  primary: '#C9A94E',      // Muted gold
+  surface: '#1A1B1E',      // Dark surface
+  text: '#E8E4D9',         // Warm off-white text
+  accent: '#7B8CDE',       // Periwinkle accent
+  secondary: '#A89050',    // Darker gold
+  light: '#2A2B30',        // Slightly lighter than surface
+  background: '#141518',   // Near-black background
+  border: '#333640',       // Subtle dark border
+  overlay: '#00000040',    // Subtle overlay
 } as const;
 
 export const theme = {
@@ -83,9 +82,9 @@ export const theme = {
     destructive: '#DC2626',
     destructiveMuted15: '#DC262615',
     deleteSwipe: '#FF4444',
-    badge: '#D4AF37',
+    badge: '#C9A94E',
     white: '#FFFFFF',
-    switchThumbInactive: '#f4f3f4',
+    switchThumbInactive: '#555555',
   },
   spacing: {
     xs: 4,
@@ -168,21 +167,21 @@ export const theme = {
     sm: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.3,
       shadowRadius: 2,
       elevation: 2,
     },
     md: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.3,
       shadowRadius: 4,
       elevation: 4,
     },
     lg: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 8,
     },
@@ -191,11 +190,11 @@ export const theme = {
     height: 90,
     paddingBottom: 20,
     paddingTop: 16,
-    blurIntensity: 50,
-    blurTint: 'light' as const,
+    blurIntensity: 80,
+    blurTint: 'dark' as const,
   },
   screenWrapper: {
-    noiseOpacity: 0.1,
+    noiseOpacity: 0.05,
     padding: 12,
   },
 } as const;

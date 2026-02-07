@@ -30,13 +30,13 @@ export const fontFiles = {
 
 export const defaults = {
   mascot: illustrations.dino,
-  backgroundTexture: textures.paper,
+  backgroundTexture: textures.grassBgDark,
   noiseTexture: textures.noiseOverlay,
   preloadImages: [
     require('@assets/images/icon.png'),
     illustrations.dino,
     textures.noiseOverlay,
-    textures.paper,
+    textures.grassBgDark,
   ] as (string | number)[],
 } as const;
 

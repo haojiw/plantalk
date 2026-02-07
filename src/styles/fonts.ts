@@ -1,5 +1,6 @@
 // Centralized Google Font imports
 // Change which fonts are loaded by editing this single file.
+// Midnight Ink: Only load fonts used by the dark theme
 
 import {
   DMSans_400Regular,
@@ -9,32 +10,9 @@ import {
 } from '@expo-google-fonts/dm-sans';
 
 import {
-  DMSerifDisplay_400Regular,
-} from '@expo-google-fonts/dm-serif-display';
-
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-
-import {
   Manrope_400Regular,
   Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
-
-import {
-  Karla_400Regular,
-  Karla_500Medium,
-  Karla_600SemiBold,
-  Karla_700Bold,
-} from '@expo-google-fonts/karla';
-
-import {
-  Sora_400Regular,
-  Sora_600SemiBold,
-} from '@expo-google-fonts/sora';
 
 import {
   Lora_400Regular,
@@ -42,28 +20,8 @@ import {
 } from '@expo-google-fonts/lora';
 
 import {
-  Lato_400Regular,
-  Lato_700Bold,
-} from '@expo-google-fonts/lato';
-
-import {
-  InstrumentSerif_400Regular,
-} from '@expo-google-fonts/instrument-serif';
-
-import {
   PatrickHand_400Regular,
 } from '@expo-google-fonts/patrick-hand';
-
-import {
-  Merriweather_400Regular,
-  Merriweather_500Medium,
-  Merriweather_600SemiBold,
-  Merriweather_700Bold,
-} from '@expo-google-fonts/merriweather';
-
-import {
-  Pangolin_400Regular,
-} from '@expo-google-fonts/pangolin';
 
 import { fontFiles } from './assets';
 
@@ -79,55 +37,20 @@ export const googleFonts = {
   SpaceMono: fontFiles.SpaceMono,
   Dyslexic: fontFiles.Dyslexic,
 
-  // Merriweather
-  Merriweather_400Regular,
-  Merriweather_500Medium,
-  Merriweather_600SemiBold,
-  Merriweather_700Bold,
+  // Lora (heading)
+  Lora_400Regular,
+  Lora_700Bold,
 
-  // DM Sans
+  // DM Sans (body)
   DMSans_400Regular,
   DMSans_500Medium,
   DMSans_600SemiBold,
   DMSans_700Bold,
 
-  // DM Serif Display
-  DMSerifDisplay_400Regular,
-
-  // Inter
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-
-  // Manrope
+  // Manrope (secondary)
   Manrope_400Regular,
   Manrope_700Bold,
 
-  // Karla
-  Karla_400Regular,
-  Karla_500Medium,
-  Karla_600SemiBold,
-  Karla_700Bold,
-
-  // Sora
-  Sora_400Regular,
-  Sora_600SemiBold,
-
-  // Lora
-  Lora_400Regular,
-  Lora_700Bold,
-
-  // Lato
-  Lato_400Regular,
-  Lato_700Bold,
-
-  // Instrument Serif
-  InstrumentSerif_400Regular,
-
-  // Patrick Hand
+  // Patrick Hand (handwriting)
   PatrickHand_400Regular,
-
-  // Pangolin
-  Pangolin_400Regular,
 } as const;
