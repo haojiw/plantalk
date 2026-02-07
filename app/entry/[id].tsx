@@ -118,7 +118,7 @@ export default function EntryDetailScreen() {
           />
           
           <View style={styles.errorContainer}>
-            <Ionicons name="leaf-outline" size={48} color={theme.colors.primary + '40'} />
+            <Ionicons name="leaf-outline" size={48} color={theme.colors.primaryMuted40} />
             <Text style={styles.errorText}>Entry not found</Text>
           </View>
         </View>
@@ -163,7 +163,7 @@ export default function EntryDetailScreen() {
               value={editTitle}
               onChangeText={setEditTitle}
               placeholder="Entry title..."
-              placeholderTextColor={theme.colors.text + '60'}
+              placeholderTextColor={theme.colors.textMuted60}
               multiline={false}
               returnKeyType="next"
             />
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...theme.typography.body,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginTop: theme.spacing.md,
   },
 }); 

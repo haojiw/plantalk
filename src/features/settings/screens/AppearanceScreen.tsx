@@ -13,35 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettings } from '@/core/providers/settings';
+import { illustrationOptions } from '@/styles/assets';
 import { theme } from '@/styles/theme';
-
-const ILLUSTRATIONS = [
-  {
-    id: 'dino',
-    name: 'Dino',
-    source: require('@assets/images/dino.png'),
-  },
-  {
-    id: 'tree',
-    name: 'Tree',
-    source: require('@assets/images/tree.png'),
-  },
-  {
-    id: 'bush',
-    name: 'Bush',
-    source: require('@assets/images/bush.png'),
-  },
-  {
-    id: 'bonsai',
-    name: 'Bonsai',
-    source: require('@assets/images/bonsai.png'),
-  },
-  {
-    id: 'doodle',
-    name: 'Doodle',
-    source: require('@assets/images/doodle.png'),
-  },
-];
 
 export const AppearanceScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -78,7 +51,7 @@ export const AppearanceScreen: React.FC = () => {
           </Text>
 
           <View style={styles.grid}>
-            {ILLUSTRATIONS.map((illustration) => (
+            {illustrationOptions.map((illustration) => (
               <Pressable
                 key={illustration.id}
                 style={[
@@ -153,7 +126,7 @@ const styles = StyleSheet.create({
   },
   sectionDescription: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginBottom: theme.spacing.lg,
   },
   grid: {

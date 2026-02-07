@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.primary + '15',
+    backgroundColor: theme.colors.primaryMuted15,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
@@ -90,12 +90,12 @@ const styles = StyleSheet.create({
   },
   description: {
     ...theme.typography.body,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
   },
   proBadge: {
-    backgroundColor: '#D4AF37',
+    backgroundColor: theme.colors.badge,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.borderRadius.full,
@@ -103,12 +103,12 @@ const styles = StyleSheet.create({
   },
   proBadgeText: {
     ...theme.typography.body,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontWeight: '700',
     letterSpacing: 2,
   },
   statusText: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
   },
 });

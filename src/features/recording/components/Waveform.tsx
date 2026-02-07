@@ -1,3 +1,4 @@
+import { defaults } from '@/styles/assets';
 import { theme } from '@/styles/theme';
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
@@ -24,7 +25,7 @@ export const Waveform: React.FC<WaveformProps> = ({ waveformValues }) => {
       
       {/* Plant Image */}
       <Image 
-        source={require('@assets/images/dino.png')} 
+        source={defaults.mascot}
         style={styles.plantImage}
         resizeMode="contain"
       />

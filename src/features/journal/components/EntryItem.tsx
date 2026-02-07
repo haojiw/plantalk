@@ -15,6 +15,7 @@ import Animated, {
 
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
+import { motion } from '@/styles/motion';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -49,7 +50,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   const getPreviewText = (entry: JournalEntry) => {
     const hasRawText = entry.rawText && entry.rawText.trim() !== '';
     const hasText = entry.text && entry.text.trim() !== '';
-    
+
     // Both empty - show status based on processing stage
     if (!hasRawText && !hasText) {
       if (entry.processingStage === 'transcribing') {
@@ -62,7 +63,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
         return 'No transcription available.';
       }
     }
-    
+
     // Have content - prefer text if available, otherwise use rawText
     return hasText ? entry.text! : entry.rawText!;
   };
@@ -71,7 +72,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   useEffect(() => {
     if (swipedEntryId !== item.id && translateX.value !== 0) {
       // This entry is open but should be closed (another entry opened or all should close)
-      translateX.value = withSpring(0, { damping: 15, stiffness: 120 });
+      translateX.value = withSpring(0, motion.springs.swipe);
     }
   }, [swipedEntryId, item.id]);
 
@@ -79,8 +80,8 @@ export const EntryItem: React.FC<EntryItemProps> = ({
   useEffect(() => {
     if (item.processingStage && item.processingStage !== 'completed') {
       processingPulse.value = withRepeat(
-        withTiming(0.6, { duration: 800 }), 
-        -1, 
+        withTiming(0.6, { duration: motion.durations.processingPulse }),
+        -1,
         true
       );
     } else {
@@ -107,7 +108,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
     // Stage 2: Stretch. As the card moves past 80px, the button grows in width.
     const buttonWidth = interpolate(
       translateX.value,
-      [-screenWidth, -100, -80, 0], // Input range (how far the card is swiped)
+      [-screenWidth, -100, motion.gestureThresholds.swipeOpenPosition, 0], // Input range (how far the card is swiped)
       [screenWidth, 100, 80, 80],   // Output range (the button's resulting width)
       Extrapolate.CLAMP
     );
@@ -115,7 +116,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
     // This makes the button appear to be revealed, not grown, during the initial swipe.
     const buttonTranslateX = interpolate(
       translateX.value,
-      [-80, 0],       // Input range
+      [motion.gestureThresholds.swipeOpenPosition, 0],       // Input range
       [0, 80],        // Output range
       Extrapolate.CLAMP
     );
@@ -133,7 +134,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
     .onBegin(() => {
       // Store the starting position when gesture begins
       startTranslateX.value = translateX.value;
-      
+
       // Priority 1: If another entry is open, close it
       if (swipedEntryId !== null && swipedEntryId !== item.id) {
         runOnJS(onSwipeOpen)(null);
@@ -145,11 +146,11 @@ export const EntryItem: React.FC<EntryItemProps> = ({
       if (swipedEntryId === null || swipedEntryId === item.id) {
         // Calculate new position from starting position + gesture translation
         const newTranslateX = startTranslateX.value + event.translationX;
-        
+
         // Allow left swipes to open (from 0 to -80) and right swipes to close (from -80 to 0)
         // Clamp the values to prevent going beyond the bounds
-        const clampedTranslateX = Math.max(Math.min(newTranslateX, 0), -120);
-        
+        const clampedTranslateX = Math.max(Math.min(newTranslateX, 0), motion.gestureThresholds.swipeMaxExtent);
+
         translateX.value = clampedTranslateX;
       }
     })
@@ -157,13 +158,13 @@ export const EntryItem: React.FC<EntryItemProps> = ({
       // Only process end gesture if no other entry is open or this is the open entry
       if (swipedEntryId === null || swipedEntryId === item.id) {
         // If swiped past the threshold (e.g., 40px left), snap open to the final position (80px).
-        if (translateX.value < -40) {
-          translateX.value = withSpring(-80, { damping: 15, stiffness: 120 });
+        if (translateX.value < -motion.gestureThresholds.swipeOpenThreshold) {
+          translateX.value = withSpring(motion.gestureThresholds.swipeOpenPosition, motion.springs.swipe);
           // Notify parent that this entry is now open
           runOnJS(onSwipeOpen)(item.id);
         } else {
           // Otherwise, snap back to closed.
-          translateX.value = withSpring(0, { damping: 15, stiffness: 120 });
+          translateX.value = withSpring(0, motion.springs.swipe);
           // Notify parent that this entry is now closed
           runOnJS(onSwipeOpen)(null);
         }
@@ -183,7 +184,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
 
       // Priority 2: If this item is open, the tap's job is to close it.
       if (translateX.value !== 0) {
-        translateX.value = withSpring(0, { damping: 15, stiffness: 120 });
+        translateX.value = withSpring(0, motion.springs.swipe);
         runOnJS(onSwipeOpen)(null);
         return; // Stop further actions
       }
@@ -199,13 +200,13 @@ export const EntryItem: React.FC<EntryItemProps> = ({
 
   const handleDeletePress = () => {
     // Start the folding animation - scale down vertically and fade out
-    rowHeight.value = withTiming(0, { duration: 300 }, (finished) => {
+    rowHeight.value = withTiming(0, { duration: motion.durations.deleteCollapse }, (finished) => {
       if (finished) {
         runOnJS(onEntryDelete)(item.id);
       }
     });
-    rowOpacity.value = withTiming(0, { duration: 200 });
-    translateX.value = withTiming(-screenWidth * 0.3, { duration: 300 });
+    rowOpacity.value = withTiming(0, { duration: motion.durations.deleteFade });
+    translateX.value = withTiming(-screenWidth * 0.3, { duration: motion.durations.deleteCollapse });
   };
 
   const formatDuration = (duration?: number): string => {
@@ -227,7 +228,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
             <Ionicons name="trash" size={20} color="white" />
           </Pressable>
         </Animated.View>
-        
+
         {/* Entry Card - the swipeable part */}
         <GestureDetector gesture={composedGesture}>
           <Animated.View style={[styles.entryItem, itemAnimatedStyle]}>
@@ -249,7 +250,7 @@ export const EntryItem: React.FC<EntryItemProps> = ({
                       <Ionicons name="alert-circle" size={12} color={theme.colors.accent} />
                     </View>
                   ) : null}
-                  
+
                   {item.duration && (
                     <Text style={styles.entryDuration}>{formatDuration(item.duration)}</Text>
                   )}
@@ -280,7 +281,7 @@ const styles = StyleSheet.create({
   },
   entrySeparator: {
     height: 1,
-    backgroundColor: theme.colors.border + '40',
+    backgroundColor: theme.colors.borderMuted40,
     marginHorizontal: -theme.spacing.md,
   },
   entryHeader: {
@@ -300,13 +301,13 @@ const styles = StyleSheet.create({
   entryPreview: {
     ...theme.typography.body,
     fontWeight: '400',
-    color: theme.colors.text + '70',
+    color: theme.colors.textMuted70,
     lineHeight: 20,
   },
   entryDuration: {
     ...theme.typography.caption,
-    color: theme.colors.text + '50',
-    fontFamily: 'SpaceMono',
+    color: theme.colors.textMuted50,
+    fontFamily: theme.fonts.monospace,
     fontSize: 12,
   },
   deleteButton: {
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF4444',
+    backgroundColor: theme.colors.deleteSwipe,
     paddingHorizontal: theme.spacing.md,
   },
   deleteButtonInner: {
@@ -336,4 +337,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-}); 
+});

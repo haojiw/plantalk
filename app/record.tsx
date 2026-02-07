@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   durationText: {
     ...theme.typography.title,
     color: theme.colors.primary,
-    fontFamily: 'SpaceMono',
+    fontFamily: theme.fonts.monospace,
   },
   controlsContainer: {
     alignItems: 'center',

@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...theme.typography.caption,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: theme.spacing.sm,

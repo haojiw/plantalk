@@ -12,15 +12,9 @@ import Animated, {
 
 import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
+import { illustrations } from '@/styles/assets';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
-
-const ILLUSTRATIONS: Record<string, any> = {
-  dino: require('@assets/images/dino.png'),
-  tree: require('@assets/images/tree.png'),
-  bush: require('@assets/images/bush.png'),
-  bonsai: require('@assets/images/bonsai.png'),
-  doodle: require('@assets/images/doodle.png'),
-};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -36,7 +30,7 @@ export default function EntryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      opacity.value = withTiming(1, { duration: 200 });
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
       return () => {
         opacity.value = 0;
       };
@@ -48,8 +42,8 @@ export default function EntryScreen() {
   // Handle plant press - animate and open record modal
   const handlePlantPress = () => {
     // Quick scale animation
-    scale.value = withSpring(0.9, { duration: 100 }, () => {
-      scale.value = withSpring(1, { duration: 200 });
+    scale.value = withSpring(0.9, motion.springs.press, () => {
+      scale.value = withSpring(1, motion.springs.pressReturn);
     });
     
     // Navigate to record screen
@@ -68,7 +62,7 @@ export default function EntryScreen() {
     opacity: opacity.value,
   }));
 
-  const illustrationSource = ILLUSTRATIONS[settings.mainIllustration] || ILLUSTRATIONS.dino;
+  const illustrationSource = illustrations[settings.mainIllustration as keyof typeof illustrations] || illustrations.dino;
 
   return (
     <ScreenWrapper>

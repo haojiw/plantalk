@@ -287,6 +287,6 @@ const styles = StyleSheet.create({
   },
   versionText: {
     ...theme.typography.caption,
-    color: theme.colors.text + '40',
+    color: theme.colors.textMuted40,
   },
 });

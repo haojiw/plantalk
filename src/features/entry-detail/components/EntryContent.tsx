@@ -34,7 +34,7 @@ export const EntryContent: React.FC<EntryContentProps> = ({
           onChangeText={setEditText}
           multiline={true}
           placeholder="Enter your text here..."
-          placeholderTextColor={theme.colors.text + '60'}
+          placeholderTextColor={theme.colors.textMuted60}
           textAlignVertical="top"
         />
       </View>
@@ -45,7 +45,7 @@ export const EntryContent: React.FC<EntryContentProps> = ({
   if (entry.processingStage === 'audio_unavailable') {
     return (
       <View style={styles.failureContainer}>
-        <Ionicons name="musical-notes-outline" size={32} color={theme.colors.text + '40'} />
+        <Ionicons name="musical-notes-outline" size={32} color={theme.colors.textMuted40} />
         <Text style={styles.failureTitle}>Audio Unavailable</Text>
         <Text style={styles.failureMessage}>
           The audio file for this entry is missing or corrupted. This entry cannot be transcribed.
@@ -125,7 +125,7 @@ export const EntryContent: React.FC<EntryContentProps> = ({
               style={styles.dismissButton} 
               onPress={() => setShowFailureBanner(false)}
             >
-              <Ionicons name="close" size={14} color={theme.colors.text + '60'} />
+              <Ionicons name="close" size={14} color={theme.colors.textMuted60} />
             </Pressable>
           </View>
         </View>
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   },
   noContentText: {
     ...theme.typography.body,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: theme.spacing.lg,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   failureMessage: {
     ...theme.typography.body,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   processingIconContainer: {
-    backgroundColor: theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryMuted10,
     borderRadius: theme.borderRadius.full,
     padding: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
@@ -304,14 +304,14 @@ const styles = StyleSheet.create({
   },
   processingMessage: {
     ...theme.typography.body,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textAlign: 'center',
   },
   // Non-blocking banners
   refiningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryMuted10,
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.accent + '15',
+    backgroundColor: theme.colors.accentMuted15,
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   retryBannerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary + '15',
+    backgroundColor: theme.colors.primaryMuted15,
     borderRadius: theme.borderRadius.sm,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,

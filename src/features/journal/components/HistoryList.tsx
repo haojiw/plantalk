@@ -38,7 +38,7 @@ export const HistoryList: React.FC<HistoryListProps> = ({
   if (sectionedEntries.length === 0) {
     return (
       <View style={[styles.emptyState, { marginTop: 120 }]}>
-        <Ionicons name="book-outline" size={48} color={theme.colors.text + '30'} />
+        <Ionicons name="book-outline" size={48} color={theme.colors.textMuted30} />
         <Text style={styles.emptyStateText}>
           No entries yet. Start your journey!
         </Text>
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     ...theme.typography.body,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     textAlign: 'center',
     marginTop: theme.spacing.md,
     lineHeight: 22,

@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
+import { motion } from '@/styles/motion';
 
 type RecordingState = 'recording' | 'paused' | 'saving' | 'error';
 
@@ -156,15 +157,17 @@ export const useRecorder = (): UseRecorderReturn => {
           const baseLevel = Math.max(0.1, normalizedLevel);
           
           // Update waveform bars with slight delays and variations
-          waveform1.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
-          waveform2.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 120 });
-          waveform3.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 110 });
-          waveform4.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 90 });
-          waveform5.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 130 });
-          waveform6.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 100 });
-          waveform7.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 115 });
-          waveform8.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 105 });
-          waveform9.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: 125 });
+          const { min, max } = motion.durations.waveformBar;
+          const randDur = () => min + Math.random() * (max - min);
+          waveform1.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform2.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform3.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform4.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform5.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform6.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform7.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform8.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
+          waveform9.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
         } catch (error) {
           console.error('Error getting metering:', error);
         }
@@ -180,15 +183,16 @@ export const useRecorder = (): UseRecorderReturn => {
     
     // Animate bars back to idle state
     const idleHeight = 0.3;
-    waveform1.value = withTiming(idleHeight, { duration: 300 });
-    waveform2.value = withTiming(idleHeight, { duration: 300 });
-    waveform3.value = withTiming(idleHeight, { duration: 300 });
-    waveform4.value = withTiming(idleHeight, { duration: 300 });
-    waveform5.value = withTiming(idleHeight, { duration: 300 });
-    waveform6.value = withTiming(idleHeight, { duration: 300 });
-    waveform7.value = withTiming(idleHeight, { duration: 300 });
-    waveform8.value = withTiming(idleHeight, { duration: 300 });
-    waveform9.value = withTiming(idleHeight, { duration: 300 });
+    const idleDuration = motion.durations.waveformIdle;
+    waveform1.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform2.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform3.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform4.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform5.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform6.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform7.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform8.value = withTiming(idleHeight, { duration: idleDuration });
+    waveform9.value = withTiming(idleHeight, { duration: idleDuration });
   };
 
   // Timer for recording duration with 1-hour limit

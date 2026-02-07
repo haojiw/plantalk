@@ -12,6 +12,7 @@ import { useSecureJournal } from '@/core/providers/journal';
 import { HistoryList } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { JournalEntry } from '@/shared/types';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 interface SectionData {
@@ -26,7 +27,7 @@ export default function JournalScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      opacity.value = withTiming(1, { duration: 200 });
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
       return () => {
         opacity.value = 0;
       };

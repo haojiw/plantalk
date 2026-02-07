@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginTop: theme.spacing.xs,
   },
   actionContainer: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: '#DC2626',
+    backgroundColor: theme.colors.destructive,
     borderRadius: theme.borderRadius.md,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   clearHint: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     textAlign: 'center',
     marginTop: theme.spacing.md,
   },

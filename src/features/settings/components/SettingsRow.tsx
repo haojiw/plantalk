@@ -48,7 +48,7 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
             <Ionicons
               name={icon}
               size={20}
-              color={destructive ? '#DC2626' : theme.colors.primary}
+              color={destructive ? theme.colors.destructive : theme.colors.primary}
             />
           </View>
         )}
@@ -65,7 +65,7 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
           <Ionicons
             name="chevron-forward"
             size={20}
-            color={theme.colors.text + '40'}
+            color={theme.colors.textMuted40}
           />
         )}
         {type === 'toggle' && typeof value === 'boolean' && (
@@ -74,9 +74,9 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
             onValueChange={onToggle}
             trackColor={{
               false: theme.colors.border,
-              true: theme.colors.primary + '60',
+              true: theme.colors.primaryMuted60,
             }}
-            thumbColor={value ? theme.colors.primary : '#f4f3f4'}
+            thumbColor={value ? theme.colors.primary : theme.colors.switchThumbInactive}
           />
         )}
       </View>
@@ -107,20 +107,20 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: theme.colors.primary + '15',
+    backgroundColor: theme.colors.primaryMuted15,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
   },
   iconDestructive: {
-    backgroundColor: '#DC262615',
+    backgroundColor: theme.colors.destructiveMuted15,
   },
   label: {
     ...theme.typography.body,
     color: theme.colors.text,
   },
   labelDestructive: {
-    color: '#DC2626',
+    color: theme.colors.destructive,
   },
   rightContent: {
     flexDirection: 'row',
@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
   },
   valueText: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
   },
 });

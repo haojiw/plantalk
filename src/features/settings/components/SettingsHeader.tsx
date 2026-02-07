@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useSettings } from '@/core/providers/settings';
+import { defaults } from '@/styles/assets';
 import { theme } from '@/styles/theme';
 
 export const SettingsHeader: React.FC = () => {
@@ -16,7 +17,7 @@ export const SettingsHeader: React.FC = () => {
           source={
             settings.avatarUri
               ? { uri: settings.avatarUri }
-              : require('@assets/images/dino.png')
+              : defaults.mascot
           }
           style={styles.avatar}
           contentFit="cover"
@@ -66,14 +67,14 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   badge: {
-    backgroundColor: '#D4AF37',
+    backgroundColor: theme.colors.badge,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.borderRadius.full,
   },
   badgeText: {
     ...theme.typography.caption,
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontWeight: '700',
     letterSpacing: 1,
   },

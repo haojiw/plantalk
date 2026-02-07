@@ -104,10 +104,10 @@ export const NotificationsScreen: React.FC = () => {
                 onValueChange={setWeeklyRecapEnabled}
                 trackColor={{
                   false: theme.colors.border,
-                  true: theme.colors.primary + '60',
+                  true: theme.colors.primaryMuted60,
                 }}
                 thumbColor={
-                  settings.weeklyRecapEnabled ? theme.colors.primary : '#f4f3f4'
+                  settings.weeklyRecapEnabled ? theme.colors.primary : theme.colors.switchThumbInactive
                 }
               />
             </View>
@@ -130,10 +130,10 @@ export const NotificationsScreen: React.FC = () => {
                 onValueChange={setReminderEnabled}
                 trackColor={{
                   false: theme.colors.border,
-                  true: theme.colors.primary + '60',
+                  true: theme.colors.primaryMuted60,
                 }}
                 thumbColor={
-                  settings.reminderEnabled ? theme.colors.primary : '#f4f3f4'
+                  settings.reminderEnabled ? theme.colors.primary : theme.colors.switchThumbInactive
                 }
               />
             </View>
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typography.caption,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: theme.spacing.sm,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
   toggleDescription: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
   },
   daysContainer: {
     paddingHorizontal: theme.spacing.md,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   subLabel: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginBottom: theme.spacing.sm,
   },
   daysRow: {

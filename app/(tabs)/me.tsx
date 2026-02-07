@@ -20,6 +20,8 @@ import Animated, {
 import { useSecureJournal } from '@/core/providers/journal';
 import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
+import { defaults } from '@/styles/assets';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export default function MeScreen() {
@@ -32,7 +34,7 @@ export default function MeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      opacity.value = withTiming(1, { duration: 200 });
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
       return () => {
         opacity.value = 0;
       };
@@ -77,15 +79,15 @@ export default function MeScreen() {
           <Ionicons 
             name={isExpanded ? "chevron-up" : "chevron-down"} 
             size={20} 
-            color={theme.colors.text + '60'} 
+            color={theme.colors.textMuted60} 
           />
         </TouchableOpacity>
         
         {isExpanded && (
           <Animated.View 
             style={styles.expandedContent}
-            entering={FadeIn.duration(300)}
-            exiting={FadeOut.duration(200)}
+            entering={FadeIn.duration(motion.layoutAnimations.fadeIn)}
+            exiting={FadeOut.duration(motion.layoutAnimations.fadeOut)}
           >
             {content}
           </Animated.View>
@@ -109,7 +111,7 @@ export default function MeScreen() {
               source={
                 settings.avatarUri
                   ? { uri: settings.avatarUri }
-                  : require('@assets/images/dino.png')
+                  : defaults.mascot
               }
               style={styles.avatar}
               contentFit="cover"
@@ -122,7 +124,7 @@ export default function MeScreen() {
               <Text style={styles.scoreText}>{entryCount}</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.text + '60'} />
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted60} />
         </Pressable>
 
         {/* Insights Section */}
@@ -143,15 +145,15 @@ export default function MeScreen() {
               </Text>
               <View style={styles.patternsList}>
                 <View style={styles.patternItem}>
-                  <Ionicons name="heart-outline" size={16} color={theme.colors.text + '60'} />
+                  <Ionicons name="heart-outline" size={16} color={theme.colors.textMuted60} />
                   <Text style={styles.patternText}>Emotional patterns coming soon</Text>
                 </View>
                 <View style={styles.patternItem}>
-                  <Ionicons name="trending-up-outline" size={16} color={theme.colors.text + '60'} />
+                  <Ionicons name="trending-up-outline" size={16} color={theme.colors.textMuted60} />
                   <Text style={styles.patternText}>Growth trends coming soon</Text>
                 </View>
                 <View style={styles.patternItem}>
-                  <Ionicons name="bulb-outline" size={16} color={theme.colors.text + '60'} />
+                  <Ionicons name="bulb-outline" size={16} color={theme.colors.textMuted60} />
                   <Text style={styles.patternText}>Key topics coming soon</Text>
                 </View>
               </View>
@@ -183,7 +185,7 @@ export default function MeScreen() {
             <Ionicons name="settings-outline" size={24} color={theme.colors.text} />
             <Text style={styles.settingsRowText}>Settings</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.text + '60'} />
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted60} />
         </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
@@ -218,7 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.text + '10',
+    borderColor: theme.colors.textMuted10,
   },
   avatarContainer: {
     width: 60,
@@ -248,7 +250,7 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     ...theme.typography.caption,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     fontWeight: '500',
   },
   // Section
@@ -258,7 +260,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     textTransform: 'uppercase',
     letterSpacing: 1,
     fontWeight: '600',
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.text + '10',
+    borderColor: theme.colors.textMuted10,
     overflow: 'hidden',
   },
   card: {
@@ -300,7 +302,7 @@ const styles = StyleSheet.create({
   },
   contentText: {
     ...theme.typography.body,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     lineHeight: 20,
     marginBottom: theme.spacing.md,
   },
@@ -314,13 +316,13 @@ const styles = StyleSheet.create({
   },
   patternText: {
     ...theme.typography.body,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginLeft: theme.spacing.sm,
     fontSize: 14,
   },
   comingSoonText: {
     ...theme.typography.body,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     fontStyle: 'italic',
     textAlign: 'center',
     marginTop: theme.spacing.sm,
@@ -337,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.text + '10',
+    borderColor: theme.colors.textMuted10,
   },
   settingsRowContent: {
     flexDirection: 'row',

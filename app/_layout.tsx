@@ -12,69 +12,10 @@ SplashScreen.preventAutoHideAsync();
 
 import { SecureJournalProvider } from '@/core/providers/journal';
 import { SettingsProvider, useSettings } from '@/core/providers/settings';
-import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-  DMSans_700Bold,
-} from '@expo-google-fonts/dm-sans';
-
-import {
-  DMSerifDisplay_400Regular,
-} from '@expo-google-fonts/dm-serif-display';
-
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-
-import {
-  Manrope_400Regular,
-  Manrope_700Bold,
-} from '@expo-google-fonts/manrope';
-
-import {
-  Karla_400Regular,
-  Karla_500Medium,
-  Karla_600SemiBold,
-  Karla_700Bold,
-} from '@expo-google-fonts/karla';
-
-import {
-  Sora_400Regular,
-  Sora_600SemiBold,
-} from '@expo-google-fonts/sora';
-
-import {
-  Lora_400Regular,
-  Lora_700Bold,
-} from '@expo-google-fonts/lora';
-
-import {
-  Lato_400Regular,
-  Lato_700Bold,
-} from '@expo-google-fonts/lato';
-
-import {
-  InstrumentSerif_400Regular,
-} from '@expo-google-fonts/instrument-serif';
-
-import {
-  PatrickHand_400Regular,
-} from '@expo-google-fonts/patrick-hand';
-
-import {
-  Merriweather_400Regular,
-  Merriweather_500Medium,
-  Merriweather_600SemiBold,
-  Merriweather_700Bold,
-} from '@expo-google-fonts/merriweather';
-
-import {
-  Pangolin_400Regular,
-} from '@expo-google-fonts/pangolin'; 
+import { theme } from '@/styles/theme';
+import { motion } from '@/styles/motion';
+import { defaults } from '@/styles/assets';
+import { googleFonts } from '@/styles/fonts';
 
 // Function to preload images
 function cacheImages(images: (string | number)[]) {
@@ -90,61 +31,13 @@ function cacheImages(images: (string | number)[]) {
 function RootLayoutNav() {
   const { isLoading: settingsLoading, effectiveTheme } = useSettings();
   const [imagesLoaded, setImagesLoaded] = useState(false);
-  const [fontsLoaded] = useFonts({
-    SpaceMono: require('@assets/fonts/SpaceMono-Regular.ttf'),
-    Dyslexic: require('@assets/fonts/OpenDyslexic-Regular.otf'),
-
-    // Merriweather fonts
-    Merriweather_400Regular,
-    Merriweather_500Medium,
-    Merriweather_600SemiBold,
-    Merriweather_700Bold,
-    // DM Sans fonts
-    DMSans_400Regular,
-    DMSans_700Bold,
-    // DM Serif Display fonts
-    DMSerifDisplay_400Regular,
-    // Inter fonts
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    // Manrope fonts
-    Manrope_400Regular,
-    Manrope_700Bold,
-    // Karla fonts
-    Karla_400Regular,
-    Karla_700Bold,
-    // Sora fonts
-    Sora_400Regular,
-    Sora_600SemiBold,
-    // Lora fonts
-    Lora_400Regular,
-    Lora_700Bold,
-    // Lato fonts
-    Lato_400Regular,
-    Lato_700Bold,
-    // Instrument Serif fonts
-    InstrumentSerif_400Regular,
-    // PatrickHand fonts
-    PatrickHand_400Regular,
-    
-    // Pangolin fonts
-    Pangolin_400Regular,
-  });
+  const [fontsLoaded] = useFonts(googleFonts);
 
   // Preload images
   useEffect(() => {
     async function loadImagesAsync() {
       try {
-        const imageAssets = cacheImages([
-          // Images
-          require('@assets/images/icon.png'),
-          require('@assets/images/dino.png'),
-          // Textures
-          require('@assets/texture/noise_overlay.webp'),
-          require('@assets/texture/paper.jpg'),
-        ]);
+        const imageAssets = cacheImages(defaults.preloadImages);
 
         await Promise.all(imageAssets);
         setImagesLoaded(true);
@@ -171,39 +64,39 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ 
+    <Stack screenOptions={{
       headerShown: false,
-      animation: 'none',
-      contentStyle: { 
-        backgroundColor: effectiveTheme === 'dark' ? '#1a1a1a' : '#F5F3E8' 
+      animation: motion.screenTransitions.rootStack,
+      contentStyle: {
+        backgroundColor: effectiveTheme === 'dark' ? '#1a1a1a' : theme.colors.background
       },
     }}>
       {/* Tabs as the primary navigation */}
-      <Stack.Screen 
-        name="(tabs)" 
-        options={{ 
+      <Stack.Screen
+        name="(tabs)"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
       {/* Modal and detailed screens */}
-      <Stack.Screen 
-        name="record" 
-        options={{ 
+      <Stack.Screen
+        name="record"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="entry/[id]" 
-        options={{ 
+      <Stack.Screen
+        name="entry/[id]"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
       {/* Settings screens */}
-      <Stack.Screen 
-        name="settings" 
-        options={{ 
+      <Stack.Screen
+        name="settings"
+        options={{
           headerShown: false,
-        }} 
+        }}
       />
       <Stack.Screen name="+not-found" />
     </Stack>

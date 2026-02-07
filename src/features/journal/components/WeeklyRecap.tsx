@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const WeeklyRecap = () => {
@@ -26,15 +27,15 @@ export const WeeklyRecap = () => {
         <Ionicons 
           name={isExpanded ? "chevron-up" : "chevron-down"} 
           size={20} 
-          color={theme.colors.text + '60'} 
+          color={theme.colors.textMuted60}
         />
       </TouchableOpacity>
       
       {isExpanded && (
         <Animated.View 
           style={styles.expandedContent}
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(200)}
+          entering={FadeIn.duration(motion.layoutAnimations.fadeIn)}
+          exiting={FadeOut.duration(motion.layoutAnimations.fadeOut)}
         >
           <Text style={styles.contentText}>
             I completed 5 journal entries this week, mostly reflecting on work challenges. 
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     ...theme.shadows.sm,
     borderWidth: 1,
-    borderColor: theme.colors.text + '10',
+    borderColor: theme.colors.textMuted10,
     overflow: 'hidden',
     marginHorizontal: theme.spacing.sm,
     marginVertical: theme.spacing.md,
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   contentText: {
     ...theme.typography.body,
     fontFamily: theme.fonts.body3,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     lineHeight: 20,
   },
 });

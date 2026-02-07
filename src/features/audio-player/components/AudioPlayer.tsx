@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    backgroundColor: theme.colors.border + '60',
+    backgroundColor: theme.colors.borderMuted60,
     borderRadius: 2,
   },
   progressFill: {
@@ -153,8 +153,8 @@ const styles = StyleSheet.create({
   },
   audioDuration: {
     ...theme.typography.caption,
-    color: theme.colors.text + '80',
-    fontFamily: 'SpaceMono',
+    color: theme.colors.textMuted80,
+    fontFamily: theme.fonts.monospace,
     marginLeft: theme.spacing.sm,
   },
 }); 

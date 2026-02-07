@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   statsText: {
     ...theme.typography.body,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     marginBottom: theme.spacing.xs,
   },
 });

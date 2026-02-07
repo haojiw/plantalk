@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettings } from '@/core/providers/settings';
+import { defaults } from '@/styles/assets';
 import { theme } from '@/styles/theme';
 
 export const ProfileScreen: React.FC = () => {
@@ -92,7 +93,7 @@ export const ProfileScreen: React.FC = () => {
             source={
               settings.avatarUri
                 ? { uri: settings.avatarUri }
-                : require('@assets/images/dino.png')
+                : defaults.mascot
             }
             style={styles.avatar}
             contentFit="cover"
@@ -112,7 +113,7 @@ export const ProfileScreen: React.FC = () => {
           value={name}
           onChangeText={setName}
           placeholder="Enter your name"
-          placeholderTextColor={theme.colors.text + '40'}
+          placeholderTextColor={theme.colors.textMuted40}
           autoCapitalize="words"
           autoCorrect={false}
         />
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
   },
   avatarHint: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
     marginTop: theme.spacing.sm,
   },
   inputSection: {
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     ...theme.typography.caption,
-    color: theme.colors.text + '80',
+    color: theme.colors.textMuted80,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: theme.spacing.sm,

@@ -136,6 +136,6 @@ const styles = StyleSheet.create({
   },
   nativeName: {
     ...theme.typography.caption,
-    color: theme.colors.text + '60',
+    color: theme.colors.textMuted60,
   },
 });

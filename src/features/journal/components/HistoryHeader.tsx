@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   headerBorder: {
     height: 1,
-    backgroundColor: theme.colors.border + '20',
+    backgroundColor: theme.colors.borderMuted20,
     position: 'absolute',
     bottom: 0,
     left: 0,

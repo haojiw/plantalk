@@ -1,4 +1,5 @@
 import { interpolate, SharedValue, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { motion } from '@/styles/motion';
 
 export interface UseDateRevealAnimationProps {
   scrollOffset: SharedValue<number>;
@@ -24,12 +25,12 @@ export const useDateRevealAnimation = ({ scrollOffset }: UseDateRevealAnimationP
     
     // If user pulls down significantly, reveal the date permanently
     if (scrollOffset.value < -50 && dateRevealed.value === 0) {
-      dateRevealed.value = withSpring(1, { damping: 15, stiffness: 100 });
+      dateRevealed.value = withSpring(1, motion.springs.reveal);
     }
     
     // If user scrolls down after revealing, hide the date again
     if (scrollOffset.value > 50 && dateRevealed.value === 1) {
-      dateRevealed.value = withSpring(0, { damping: 15, stiffness: 100 });
+      dateRevealed.value = withSpring(0, motion.springs.reveal);
     }
     
     // Show either pull-to-reveal or permanent revealed state

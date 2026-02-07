@@ -14,16 +14,16 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.text + '40',
+        tabBarInactiveTintColor: theme.colors.textMuted40,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          paddingBottom: 20,
-          paddingTop: 16,
-          height: 90,
+          paddingBottom: theme.tabBar.paddingBottom,
+          paddingTop: theme.tabBar.paddingTop,
+          height: theme.tabBar.height,
           position: 'absolute',
           left: 0,
           right: 0,
@@ -35,11 +35,11 @@ export default function TabLayout() {
         },
         tabBarBackground: () => (
           <BlurView 
-            intensity={50}
-            tint="light"
+            intensity={theme.tabBar.blurIntensity}
+            tint={theme.tabBar.blurTint}
             style={{
               flex: 1,
-              backgroundColor: theme.colors.background + 'A0',
+              backgroundColor: theme.colors.backgroundBlur,
             }}
           />
         ),
@@ -55,11 +55,11 @@ export default function TabLayout() {
               width: 60,
               height: 40,
               borderRadius: 12,
-              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              backgroundColor: focused ? theme.colors.primaryMuted20 : 'transparent',
               justifyContent: 'center',
               alignItems: 'center',
             }}>
-              <Ionicons 
+              <Ionicons
                 name={focused ? 'book' : 'book-outline'} 
                 size={24} 
                 color={focused ? theme.colors.primary : color} 
@@ -104,7 +104,7 @@ export default function TabLayout() {
               width: 60,
               height: 40,
               borderRadius: 12,
-              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              backgroundColor: focused ? theme.colors.primaryMuted20 : 'transparent',
               justifyContent: 'center',
               alignItems: 'center',
             }}>

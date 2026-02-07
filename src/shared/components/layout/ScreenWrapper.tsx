@@ -1,4 +1,5 @@
 import { theme } from '@/styles/theme';
+import { defaults } from '@/styles/assets';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { ImageBackground, StyleSheet, View, ViewStyle } from 'react-native';
@@ -23,16 +24,16 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
     <>
       <StatusBar style={statusBarStyle} />
       <ImageBackground
-        source={require('@assets/texture/paper.jpg')}
+        source={defaults.backgroundTexture}
         style={[styles.container, style]}
         resizeMode="cover"
       >
         {/* Noise texture overlay */}
         <ImageBackground
-          source={require('@assets/texture/noise_overlay.webp')}
+          source={defaults.noiseTexture}
           style={styles.noiseOverlay}
           resizeMode="repeat"
-          imageStyle={{ opacity: 0.1 }}
+          imageStyle={{ opacity: theme.screenWrapper.noiseOpacity }}
         >
           <View
             style={[
@@ -40,7 +41,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
               {
                 paddingTop: insets.top,
                 paddingBottom: insets.bottom,
-                paddingHorizontal: withPadding ? 12 : 0,
+                paddingHorizontal: withPadding ? theme.screenWrapper.padding : 0,
               },
             ]}
           >

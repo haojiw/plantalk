@@ -4,7 +4,7 @@ const fonts = {
   heading: 'Merriweather',     // Used for titles and headings in all screens.
   body: 'Inter',                // Used for body, caption, and small text throughout the app.
   bodyBold: 'Karla_700Bold',               // Used for subheadings and entry titles.
-  
+
 
   // Secondary fonts
   body2: 'Karla',
@@ -13,8 +13,8 @@ const fonts = {
   // Utility fonts
   monospace: 'SpaceMono',                  // For code, numbers, timestamps in recording screen
   handwriting: 'Pangolin',
-  
-  // alternatives: 
+
+  // alternatives:
 
   // sans:
   // Inter_400Regular, Inter_700Bold
@@ -31,7 +31,7 @@ const fonts = {
   // Lora_400Regular, Lora_700Bold
   // Merriweather_400Regular, Merriweather_700Bold
 
-  // utility: 
+  // utility:
   // Pangolin_400Regular
   // PatrickHand_400Regular
   // Dyslexic
@@ -39,18 +39,53 @@ const fonts = {
 
 } as const;
 
+const baseColors = {
+  primary: '#3A7A4C',      // Deep forest green
+  surface: '#F2EDDB',      // Warm cream background
+  text: '#2F4A34',         // Dark green text
+  accent: '#F0C274',       // Golden yellow accent
+  secondary: '#538c63',    // Medium green
+  light: '#C5D6C7',        // Light green
+  background: '#F5F3E8',   // Slightly warmer than surface
+  border: '#D4CDB1',       // Subtle border color
+  overlay: '#00000020',    // Subtle overlay
+} as const;
+
 export const theme = {
   fonts,
   colors: {
-    primary: '#3A7A4C',      // Deep forest green
-    surface: '#F2EDDB',      // Warm cream background F2EDDB E7E2C2
-    text: '#2F4A34',         // Dark green text 243C2E
-    accent: '#F0C274',       // Golden yellow accent
-    secondary: '#538c63',    // Medium green
-    light: '#C5D6C7',        // Light green
-    background: '#F5F3E8',   // Slightly warmer than surface
-    border: '#D4CDB1',       // Subtle border color
-    overlay: '#00000020',    // Subtle overlay
+    ...baseColors,
+
+    // Pre-computed opacity variants — eliminates all `+ 'XX'` hex concatenation in components
+    textMuted10: baseColors.text + '10',
+    textMuted30: baseColors.text + '30',
+    textMuted40: baseColors.text + '40',
+    textMuted50: baseColors.text + '50',
+    textMuted60: baseColors.text + '60',
+    textMuted70: baseColors.text + '70',
+    textMuted80: baseColors.text + '80',
+
+    primaryMuted10: baseColors.primary + '10',
+    primaryMuted15: baseColors.primary + '15',
+    primaryMuted20: baseColors.primary + '20',
+    primaryMuted40: baseColors.primary + '40',
+    primaryMuted60: baseColors.primary + '60',
+
+    accentMuted15: baseColors.accent + '15',
+
+    borderMuted20: baseColors.border + '20',
+    borderMuted40: baseColors.border + '40',
+    borderMuted60: baseColors.border + '60',
+
+    backgroundBlur: baseColors.background + 'A0',
+
+    // Semantic colors
+    destructive: '#DC2626',
+    destructiveMuted15: '#DC262615',
+    deleteSwipe: '#FF4444',
+    badge: '#D4AF37',
+    white: '#FFFFFF',
+    switchThumbInactive: '#f4f3f4',
   },
   spacing: {
     xs: 4,
@@ -152,6 +187,17 @@ export const theme = {
       elevation: 8,
     },
   },
+  tabBar: {
+    height: 90,
+    paddingBottom: 20,
+    paddingTop: 16,
+    blurIntensity: 50,
+    blurTint: 'light' as const,
+  },
+  screenWrapper: {
+    noiseOpacity: 0.1,
+    padding: 12,
+  },
 } as const;
 
-export type Theme = typeof theme; 
+export type Theme = typeof theme;
