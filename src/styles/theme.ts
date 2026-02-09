@@ -1,7 +1,7 @@
 // Font families - change these to experiment with different fonts
 const fonts = {
   // Primary fonts for main content
-  heading: 'Merriweather',     // Used for titles and headings in all screens.
+  heading: 'Lora',     // Used for titles and headings in all screens.
   body: 'Inter',                // Used for body, caption, and small text throughout the app.
   bodyBold: 'Karla_700Bold',               // Used for subheadings and entry titles.
 

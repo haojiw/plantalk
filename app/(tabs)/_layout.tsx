@@ -21,8 +21,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          icon: { sf: 'plus.circle' },
-          selectedIcon: { sf: 'plus.circle.fill' },
+          icon: { sf: 'house' },
+          selectedIcon: { sf: 'house.fill' },
         }}
       />
       <NativeTabs.Trigger
