@@ -8,6 +8,7 @@ export const illustrations = {
   bush: require('@assets/images/bush.png'),
   bonsai: require('@assets/images/bonsai.png'),
   doodle: require('@assets/images/doodle.png'),
+  door: require('@assets/images/door.png'),
 } as const;
 
 export const textures = {
@@ -32,11 +33,13 @@ export const fontFiles = {
 
 export const defaults = {
   mascot: illustrations.dino,
+  recorder: illustrations.door,
   backgroundTexture: textures.paper,
   noiseTexture: textures.noiseOverlay,
   preloadImages: [
     require('@assets/images/icon.png'),
     illustrations.dino,
+    illustrations.door,
     textures.noiseOverlay,
     textures.paper,
     illustrations.chapel,

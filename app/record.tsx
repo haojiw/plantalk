@@ -10,7 +10,7 @@ export default function RecordScreen() {
   const {
     recordingState,
     duration,
-    waveformValues,
+    audioLevels,
     handlePauseRecording,
     handleResumeRecording,
     handleFinishRecording,
@@ -45,7 +45,7 @@ export default function RecordScreen() {
         </View>
 
         {/* Waveform Display */}
-        <Waveform waveformValues={waveformValues} />
+        <Waveform audioLevels={audioLevels} />
 
         {/* Controls */}
         <View style={styles.controlsContainer}>          
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   statusText: {
     ...theme.typography.subheading,
@@ -127,8 +127,8 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     alignItems: 'center',
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.xxl,
+    paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.lg,
   },
   recordingControls: {
     flexDirection: 'row',

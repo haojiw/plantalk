@@ -10,8 +10,6 @@ import {
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState } from 'react-native';
-import { useSharedValue, withTiming } from 'react-native-reanimated';
-import { motion } from '@/styles/motion';
 
 type RecordingState = 'recording' | 'paused' | 'saving' | 'error';
 
@@ -19,7 +17,7 @@ export interface UseRecorderReturn {
   recordingState: RecordingState;
   duration: number;
   hasPermission: boolean;
-  waveformValues: Array<{ value: number }>;
+  audioLevels: number[];
   handlePauseRecording: () => Promise<void>;
   handleResumeRecording: () => Promise<void>;
   handleFinishRecording: () => Promise<void>;
@@ -37,25 +35,20 @@ export const useRecorder = (): UseRecorderReturn => {
   const meteringInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const { addEntry } = useSecureJournal();
 
-  // Create audio recorder using expo-audio with high quality preset
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(audioRecorder);
+  // Create audio recorder using expo-audio with high quality preset + metering
+  const audioRecorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    isMeteringEnabled: true,
+  });
+  const recorderState = useAudioRecorderState(audioRecorder, 100);
 
-  // Waveform animation with 9 bars for better visual effect
-  const waveform1 = useSharedValue(0.3);
-  const waveform2 = useSharedValue(0.3);
-  const waveform3 = useSharedValue(0.3);
-  const waveform4 = useSharedValue(0.3);
-  const waveform5 = useSharedValue(0.3);
-  const waveform6 = useSharedValue(0.3);
-  const waveform7 = useSharedValue(0.3);
-  const waveform8 = useSharedValue(0.3);
-  const waveform9 = useSharedValue(0.3);
+  // Ref to avoid stale closure in setInterval — always reads latest recorder state
+  const recorderStateRef = useRef(recorderState);
+  recorderStateRef.current = recorderState;
 
-  const waveformValues = [
-    waveform1, waveform2, waveform3, waveform4, waveform5,
-    waveform6, waveform7, waveform8, waveform9
-  ];
+  // Rolling buffer of normalized audio levels (0-1) for waveform display
+  // Starts empty — bars grow from the right as audio arrives
+  const [audioLevels, setAudioLevels] = useState<number[]>([]);
 
   // Monitor app state to ensure recording continues in background
   useEffect(() => {
@@ -145,34 +138,24 @@ export const useRecorder = (): UseRecorderReturn => {
   };
 
   const startMetering = () => {
-    meteringInterval.current = setInterval(async () => {
-      if (recorderState.isRecording && recorderState.metering !== undefined) {
-        try {
-          // Convert dBFS to a 0-1 scale (dBFS ranges from -160 to 0)
-          // We'll focus on the -60 to 0 range for better visual response
-          const normalizedLevel = Math.max(0, Math.min(1, (recorderState.metering + 60) / 60));
-          
-          // Add some randomization for more natural waveform appearance
-          const variation = 0.2;
-          const baseLevel = Math.max(0.1, normalizedLevel);
-          
-          // Update waveform bars with slight delays and variations
-          const { min, max } = motion.durations.waveformBar;
-          const randDur = () => min + Math.random() * (max - min);
-          waveform1.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform2.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform3.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform4.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform5.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform6.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform7.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform8.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-          waveform9.value = withTiming(baseLevel + (Math.random() - 0.5) * variation, { duration: randDur() });
-        } catch (error) {
-          console.error('Error getting metering:', error);
-        }
+    meteringInterval.current = setInterval(() => {
+      const state = recorderStateRef.current;
+      if (state.isRecording && state.metering !== undefined) {
+        setAudioLevels(prev => {
+          const db = state.metering ?? -160;
+          // Hard noise gate at -30dB — kills ambient room noise
+          // Map -30→0 dB to 0→1, power curve for natural spread
+          const normalized = db < -30
+            ? 0
+            : Math.pow(Math.min(1, (db + 30) / 30), 0.6);
+          // Grow from right until buffer is full, then shift left
+          const next = prev.length < 50
+            ? [...prev, normalized]
+            : [...prev.slice(1), normalized];
+          return next;
+        });
       }
-    }, 100);
+    }, 70);
   };
 
   const stopMetering = () => {
@@ -180,19 +163,6 @@ export const useRecorder = (): UseRecorderReturn => {
       clearInterval(meteringInterval.current);
       meteringInterval.current = null;
     }
-    
-    // Animate bars back to idle state
-    const idleHeight = 0.3;
-    const idleDuration = motion.durations.waveformIdle;
-    waveform1.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform2.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform3.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform4.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform5.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform6.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform7.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform8.value = withTiming(idleHeight, { duration: idleDuration });
-    waveform9.value = withTiming(idleHeight, { duration: idleDuration });
   };
 
   // Timer for recording duration with 1-hour limit
@@ -297,7 +267,7 @@ export const useRecorder = (): UseRecorderReturn => {
     recordingState,
     duration,
     hasPermission,
-    waveformValues,
+    audioLevels,
     handlePauseRecording,
     handleResumeRecording,
     handleFinishRecording,
