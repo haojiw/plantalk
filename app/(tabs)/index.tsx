@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
@@ -39,14 +38,10 @@ export default function EntryScreen() {
 
   const greeting = useMemo(() => getGreeting(), []);
 
-  // Handle plant press - animate and open record modal
-  const handlePlantPress = () => {
-    // Quick scale animation
-    scale.value = withSpring(0.9, motion.springs.press, () => {
+  const handleChapelPress = () => {
+    scale.value = withSpring(0.95, motion.springs.press, () => {
       scale.value = withSpring(1, motion.springs.pressReturn);
     });
-    
-    // Navigate to record screen
     try {
       router.push('/record');
     } catch (error) {
@@ -54,7 +49,7 @@ export default function EntryScreen() {
     }
   };
 
-  const plantAnimatedStyle = useAnimatedStyle(() => ({
+  const chapelAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
@@ -62,28 +57,24 @@ export default function EntryScreen() {
     opacity: opacity.value,
   }));
 
-  const illustrationSource = illustrations[settings.mainIllustration as keyof typeof illustrations] || illustrations.dino;
-
   return (
-    <ScreenWrapper>
+    <ScreenWrapper withPadding={false}>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
-          <Text style={styles.streakText}>Start your journey today</Text>
+          <Text style={styles.subtitle}>Tap to begin</Text>
         </View>
 
-        {/* Plant Display */}
-        <View style={styles.plantContainer}>
-          <Pressable onPress={handlePlantPress}>
-            <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
-              <View style={styles.plantCard}>
-                <Image
-                  source={illustrationSource}
-                  style={styles.plantImage}
-                  contentFit="contain"
-                />
-              </View>
+        {/* Chapel at the bottom */}
+        <View style={styles.chapelContainer}>
+          <Pressable onPress={handleChapelPress}>
+            <Animated.View style={chapelAnimatedStyle}>
+              <Image
+                source={illustrations.chapel}
+                style={styles.chapelImage}
+                contentFit="contain"
+              />
             </Animated.View>
           </Pressable>
         </View>
@@ -95,12 +86,12 @@ export default function EntryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
     marginTop: theme.spacing.xxl,
     paddingTop: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
   },
   greeting: {
     ...theme.typography.heading,
@@ -108,32 +99,19 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
     marginVertical: theme.spacing.sm,
+    textAlign: 'center',
   },
-  streakText: {
+  subtitle: {
     ...theme.typography.handwriting,
     color: theme.colors.primary,
     fontWeight: '500',
   },
-  plantContainer: {
+  chapelContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    justifyContent: 'flex-end',
   },
-  plantWrapper: {
-    marginBottom: theme.spacing.lg,
-  },
-  plantCard: {
-    width: 300,
-    height: 300,
-    borderRadius: theme.borderRadius.xl,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...theme.shadows.lg,
-  },
-  plantImage: {
-    width: 300,
-    height: 300,
+  chapelImage: {
+    width: '100%',
+    aspectRatio: 3 / 4,
   },
 });

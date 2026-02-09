@@ -2,6 +2,7 @@
 // All require() references live here so swapping textures/illustrations is one-file change.
 
 export const illustrations = {
+  chapel: require('@assets/images/chapel.webp'),
   dino: require('@assets/images/dino.png'),
   tree: require('@assets/images/tree.png'),
   bush: require('@assets/images/bush.png'),
@@ -16,6 +17,7 @@ export const textures = {
   grassBg: require('@assets/texture/grass_bg.webp'),
   grassBgDark: require('@assets/texture/grass_bg_dark.webp'),
   grassBgLight: require('@assets/texture/grass_bg_light.webp'),
+  canvas: require('@assets/texture/canvas.webp'),
 } as const;
 
 export const avatars = {
@@ -30,13 +32,14 @@ export const fontFiles = {
 
 export const defaults = {
   mascot: illustrations.dino,
-  backgroundTexture: textures.paper,
+  backgroundTexture: textures.canvas,
   noiseTexture: textures.noiseOverlay,
   preloadImages: [
     require('@assets/images/icon.png'),
     illustrations.dino,
     textures.noiseOverlay,
-    textures.paper,
+    textures.canvas,
+    illustrations.chapel,
   ] as (string | number)[],
 } as const;
 
