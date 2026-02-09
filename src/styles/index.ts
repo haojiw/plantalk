@@ -7,6 +7,7 @@ export type { Motion } from './motion';
 export {
   illustrations,
   textures,
+  stages,
   avatars,
   fontFiles,
   defaults,

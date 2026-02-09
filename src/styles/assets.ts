@@ -23,6 +23,10 @@ export const avatars = {
   trex: require('@assets/avatars/trex.png'),
 } as const;
 
+export const stages = {
+  chapel: require('@assets/stage/chapel.png'),
+} as const;
+
 export const fontFiles = {
   SpaceMono: require('@assets/fonts/SpaceMono-Regular.ttf'),
   Dyslexic: require('@assets/fonts/OpenDyslexic-Regular.otf'),
@@ -37,6 +41,7 @@ export const defaults = {
     illustrations.dino,
     textures.noiseOverlay,
     textures.paper,
+    stages.chapel,
   ] as (string | number)[],
 } as const;
 
