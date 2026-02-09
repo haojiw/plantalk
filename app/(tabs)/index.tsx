@@ -8,6 +8,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
@@ -24,6 +25,7 @@ function getGreeting(): string {
 
 export default function EntryScreen() {
   const { settings } = useSettings();
+  const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -67,13 +69,13 @@ export default function EntryScreen() {
         </View>
 
         {/* Chapel at the bottom */}
-        <View style={styles.chapelContainer}>
+        <View style={[styles.chapelContainer, { marginBottom: -insets.bottom }]}>
           <Pressable onPress={handleChapelPress}>
             <Animated.View style={chapelAnimatedStyle}>
               <Image
                 source={illustrations.chapel}
                 style={styles.chapelImage}
-                contentFit="contain"
+                contentFit="cover"
               />
             </Animated.View>
           </Pressable>
