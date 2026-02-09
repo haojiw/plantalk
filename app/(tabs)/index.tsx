@@ -10,21 +10,21 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
 import { illustrations } from '@/styles/assets';
 import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+function formatDate(): string {
+  const now = new Date();
+  return now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 }
 
 export default function EntryScreen() {
-  const { settings } = useSettings();
   const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
@@ -38,7 +38,7 @@ export default function EntryScreen() {
     }, [])
   );
 
-  const greeting = useMemo(() => getGreeting(), []);
+  const date = useMemo(() => formatDate(), []);
 
   const handleChapelPress = () => {
     scale.value = withSpring(0.95, motion.springs.press, () => {
@@ -62,13 +62,10 @@ export default function EntryScreen() {
   return (
     <ScreenWrapper withPadding={false}>
       <Animated.View style={[styles.container, containerAnimatedStyle]}>
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
-          <Text style={styles.subtitle}>Tap to begin</Text>
+          <Text style={styles.date}>{date}.</Text>
         </View>
 
-        {/* Chapel at the bottom */}
         <View style={[styles.chapelContainer, { marginBottom: -insets.bottom }]}>
           <Pressable onPress={handleChapelPress}>
             <Animated.View style={chapelAnimatedStyle}>
@@ -95,18 +92,11 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.xl,
     paddingHorizontal: theme.spacing.lg,
   },
-  greeting: {
-    ...theme.typography.heading,
-    color: theme.colors.text,
-    fontSize: 28,
-    lineHeight: 32,
-    marginVertical: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  subtitle: {
+  date: {
     ...theme.typography.handwriting,
-    color: theme.colors.primary,
-    fontWeight: '500',
+    color: theme.colors.textMuted60,
+    fontSize: 18,
+    lineHeight: 20,
   },
   chapelContainer: {
     flex: 1,
