@@ -1,18 +1,18 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useFocusEffect } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useMemo } from 'react';
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useSettings } from '@/core/providers/settings';
-import { defaults, stages } from '@/styles/assets';
+import { ScreenWrapper } from '@/shared/components';
+import { illustrations } from '@/styles/assets';
 import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
@@ -25,7 +25,6 @@ function getGreeting(): string {
 
 export default function EntryScreen() {
   const { settings } = useSettings();
-  const insets = useSafeAreaInsets();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -40,10 +39,14 @@ export default function EntryScreen() {
 
   const greeting = useMemo(() => getGreeting(), []);
 
-  const handlePress = () => {
-    scale.value = withSpring(0.97, motion.springs.press, () => {
+  // Handle plant press - animate and open record modal
+  const handlePlantPress = () => {
+    // Quick scale animation
+    scale.value = withSpring(0.9, motion.springs.press, () => {
       scale.value = withSpring(1, motion.springs.pressReturn);
     });
+    
+    // Navigate to record screen
     try {
       router.push('/record');
     } catch (error) {
@@ -51,7 +54,7 @@ export default function EntryScreen() {
     }
   };
 
-  const imageAnimatedStyle = useAnimatedStyle(() => ({
+  const plantAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
 
@@ -59,57 +62,45 @@ export default function EntryScreen() {
     opacity: opacity.value,
   }));
 
+  const illustrationSource = illustrations[settings.mainIllustration as keyof typeof illustrations] || illustrations.dino;
+
   return (
-    <>
-      <StatusBar style="dark" />
-      <View style={styles.screen}>
-        <Pressable onPress={handlePress} style={styles.pressable}>
-          <Animated.View style={[styles.animatedContainer, imageAnimatedStyle, containerAnimatedStyle]}>
-            <Image
-              source={stages.chapel}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-            />
+    <ScreenWrapper>
+      <Animated.View style={[styles.container, containerAnimatedStyle]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
+          <Text style={styles.streakText}>Start your journey today</Text>
+        </View>
 
-            <ImageBackground
-              source={defaults.noiseTexture}
-              style={StyleSheet.absoluteFill}
-              resizeMode="repeat"
-              imageStyle={{ opacity: 0.04 }}
-            />
-
-            <View style={[styles.contentOverlay, { paddingTop: insets.top }]}>
-              <View style={styles.header}>
-                <Text style={styles.greeting}>{greeting} {settings.displayName}</Text>
-                <Text style={styles.subtitle}>Tap to begin</Text>
+        {/* Plant Display */}
+        <View style={styles.plantContainer}>
+          <Pressable onPress={handlePlantPress}>
+            <Animated.View style={[styles.plantWrapper, plantAnimatedStyle]}>
+              <View style={styles.plantCard}>
+                <Image
+                  source={illustrationSource}
+                  style={styles.plantImage}
+                  contentFit="contain"
+                />
               </View>
-            </View>
-          </Animated.View>
-        </Pressable>
-      </View>
-    </>
+            </Animated.View>
+          </Pressable>
+        </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  container: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
-  },
-  pressable: {
-    flex: 1,
-  },
-  animatedContainer: {
-    flex: 1,
-  },
-  contentOverlay: {
-    flex: 1,
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
     marginTop: theme.spacing.xxl,
     paddingTop: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
   },
   greeting: {
     ...theme.typography.heading,
@@ -117,11 +108,32 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
     marginVertical: theme.spacing.sm,
-    textAlign: 'center',
   },
-  subtitle: {
+  streakText: {
     ...theme.typography.handwriting,
     color: theme.colors.primary,
     fontWeight: '500',
+  },
+  plantContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  plantWrapper: {
+    marginBottom: theme.spacing.lg,
+  },
+  plantCard: {
+    width: 300,
+    height: 300,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.lg,
+  },
+  plantImage: {
+    width: 300,
+    height: 300,
   },
 });
