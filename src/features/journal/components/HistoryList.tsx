@@ -1,4 +1,4 @@
-import { EntryItem, WeeklyRecap } from '@/features/journal';
+import { EntryItem } from '@/features/journal';
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,7 +58,6 @@ export const HistoryList: React.FC<HistoryListProps> = ({
         bouncesZoom={false}
         onTouchStart={onOutsideInteraction}
         onScroll={onScroll}>
-        <WeeklyRecap />
         {sectionedEntries.map((section) => (
           <View key={section.title}>
             {/* Section Header */}

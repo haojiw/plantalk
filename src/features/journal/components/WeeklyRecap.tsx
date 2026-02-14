@@ -52,12 +52,9 @@ const styles = StyleSheet.create({
   cardContainer: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.borderRadius.lg,
-    ...theme.shadows.sm,
     borderWidth: 1,
     borderColor: theme.colors.textMuted10,
     overflow: 'hidden',
-    marginHorizontal: theme.spacing.sm,
-    marginVertical: theme.spacing.md,
   },
   card: {
     paddingHorizontal: theme.spacing.lg,
@@ -65,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 70,
+    minHeight: 60,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -73,7 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    ...theme.typography.subheading,
+    ...theme.typography.body,
     color: theme.colors.text,
     fontWeight: '600',
     marginLeft: theme.spacing.md,

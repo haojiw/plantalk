@@ -19,6 +19,7 @@ import Animated, {
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { useSettings } from '@/core/providers/settings';
+import { WeeklyRecap } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { defaults } from '@/styles/assets';
 import { motion } from '@/styles/motion';
@@ -133,6 +134,8 @@ export default function MeScreen() {
         </View>
 
         <View style={styles.cardsContainer}>
+          <WeeklyRecap />
+
           {/* Your Patterns Card */}
           {renderExpandableCard(
             'patterns',
