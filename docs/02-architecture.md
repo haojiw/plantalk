@@ -156,7 +156,7 @@ styles/
 
 1. **UI**: `app/(tabs)/journal.tsx` renders `features/journal/HistoryList`.
 2. **Data**: `useSecureJournal().state.entries` (already filtered/sorted in provider selectors).
-3. **UX**: Sectioned by day (“Today”, “Yesterday”, “Previous 7/30 Days”, then Month/Year); swipe‑to‑delete hooks into provider ops.
+3. **UX**: Sectioned by day (“Today”, “Yesterday”, Past 7/30 Days”, then Month/Year); swipe‑to‑delete hooks into provider ops.
 
 ### C) Entry Detail
 

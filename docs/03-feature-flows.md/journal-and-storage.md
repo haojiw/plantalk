@@ -57,7 +57,7 @@ There's no loading spinner because, by the time you navigate to the screen, the 
 
 Once `journal.tsx` has the list of entries, it doesn't just show them.
 
-1.  **Grouping:** A `useMemo` hook in `journal.tsx` runs, sorting all your entries into human-friendly sections: "Today," "Yesterday," "Previous 7 Days," etc.
+1.  **Grouping:** A `useMemo` hook in `journal.tsx` runs, sorting all your entries into human-friendly sections: "Today," "Yesterday," "Past 7 Days," etc.
 2.  **The List UI (`HistoryList.tsx`):** This component takes the sectioned data and renders the list, creating a `<View>` for each section.
 3.  **The Row UI (`EntryItem.tsx`):** `HistoryList` renders an `EntryItem` for each entry in a section. This component is responsible for displaying the title, text preview, and duration. It's also the component that handles the swipe-to-delete gesture.
 

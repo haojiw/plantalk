@@ -69,9 +69,9 @@ export default function JournalScreen() {
       } else if (entryDateOnly.getTime() === yesterday.getTime()) {
         sectionKey = 'Yesterday';
       } else if (entryDateOnly > sevenDaysAgo) {
-        sectionKey = 'Previous 7 Days';
+        sectionKey = 'Past 7 Days';
       } else if (entryDateOnly > thirtyDaysAgo) {
-        sectionKey = 'Previous 30 Days';
+        sectionKey = 'Past 30 Days';
       } else {
         // Group by month/year
         sectionKey = entryDate.toLocaleDateString('en-US', { 
@@ -87,7 +87,7 @@ export default function JournalScreen() {
     });
 
     // Convert to sections array in the desired order
-    const sectionOrder = ['Today', 'Yesterday', 'Previous 7 Days', 'Previous 30 Days'];
+    const sectionOrder = ['Today', 'Yesterday', 'Past 7 Days', 'Past 30 Days'];
     
     sectionOrder.forEach(key => {
       if (sectionMap.has(key)) {
