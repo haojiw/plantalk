@@ -39,7 +39,7 @@ export interface TranscriptionOutboxEntry {
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private static readonly DB_NAME = 'plantalk.db';
-  private static readonly DB_VERSION = 2; // Bumped for retryCount, externalJobId, lastError, backupText columns
+  private static readonly DB_VERSION = 3; // Bumped for audioLevels column
 
   // Initialize database connection and create tables
   async initialize(): Promise<void> {
@@ -94,6 +94,7 @@ class DatabaseService {
           externalJobId TEXT,
           lastError TEXT,
           backupText TEXT,
+          audioLevels TEXT,
           createdAt TEXT NOT NULL,
           updatedAt TEXT NOT NULL,
           UNIQUE(entryId)
@@ -164,7 +165,7 @@ class DatabaseService {
         // Migration v1 -> v2: Add robust pipeline columns
         if (currentVersion < 2) {
           console.log('[DatabaseService] Migrating to v2: Adding retryCount, externalJobId, lastError, backupText columns');
-          
+
           // Add columns one at a time (SQLite doesn't support multiple ADD COLUMN in one statement)
           // Use try/catch for each since column may already exist from previous partial migration
           try {
@@ -172,23 +173,33 @@ class DatabaseService {
           } catch (e) {
             console.log('[DatabaseService] retryCount column may already exist');
           }
-          
+
           try {
             await this.db.execAsync('ALTER TABLE entries ADD COLUMN externalJobId TEXT;');
           } catch (e) {
             console.log('[DatabaseService] externalJobId column may already exist');
           }
-          
+
           try {
             await this.db.execAsync('ALTER TABLE entries ADD COLUMN lastError TEXT;');
           } catch (e) {
             console.log('[DatabaseService] lastError column may already exist');
           }
-          
+
           try {
             await this.db.execAsync('ALTER TABLE entries ADD COLUMN backupText TEXT;');
           } catch (e) {
             console.log('[DatabaseService] backupText column may already exist');
+          }
+        }
+
+        // Migration v2 -> v3: Add audioLevels column for waveform playback
+        if (currentVersion < 3) {
+          console.log('[DatabaseService] Migrating to v3: Adding audioLevels column');
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN audioLevels TEXT;');
+          } catch (e) {
+            console.log('[DatabaseService] audioLevels column may already exist');
           }
         }
 
@@ -221,8 +232,8 @@ class DatabaseService {
       // }
 
       await this.db.runAsync(`
-        INSERT INTO entries (entryId, date, title, text, rawText, audioUri, duration, processingStage, encrypted, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO entries (entryId, date, title, text, rawText, audioUri, duration, processingStage, encrypted, audioLevels, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         entry.id,
         entry.date,
@@ -233,6 +244,7 @@ class DatabaseService {
         entry.duration || null,
         entry.processingStage || 'completed',
         encrypted,
+        entry.audioLevels ? JSON.stringify(entry.audioLevels) : null,
         now,
         now
       ]);
@@ -260,7 +272,8 @@ class DatabaseService {
       Object.entries(updates).forEach(([key, value]) => {
         if (key !== 'id') {
           fields.push(`${key} = ?`);
-          values.push(value);
+          // Serialize audioLevels array to JSON for storage
+          values.push(key === 'audioLevels' && Array.isArray(value) ? JSON.stringify(value) : value);
         }
       });
 
@@ -498,6 +511,7 @@ class DatabaseService {
       externalJobId: dbEntry.externalJobId ?? undefined,
       lastError: dbEntry.lastError ?? undefined,
       backupText: dbEntry.backupText ?? undefined,
+      audioLevels: dbEntry.audioLevels ? JSON.parse(dbEntry.audioLevels as unknown as string) : undefined,
     };
   }
 
@@ -638,6 +652,7 @@ class DatabaseService {
       { name: 'externalJobId', definition: 'TEXT' },
       { name: 'lastError', definition: 'TEXT' },
       { name: 'backupText', definition: 'TEXT' },
+      { name: 'audioLevels', definition: 'TEXT' },
     ];
 
     try {

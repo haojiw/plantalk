@@ -1,5 +1,6 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSecureJournal } from '@/core/providers/journal';
+import { resampleLevels } from '@/shared/utils';
 import {
     AudioModule,
     RecordingPresets,
@@ -46,9 +47,13 @@ export const useRecorder = (): UseRecorderReturn => {
   const recorderStateRef = useRef(recorderState);
   recorderStateRef.current = recorderState;
 
-  // Rolling buffer of normalized audio levels (0-1) for waveform display
+  // Rolling buffer of normalized audio levels (0-1) for live waveform display
   // Starts empty — bars grow from the right as audio arrives
   const [audioLevels, setAudioLevels] = useState<number[]>([]);
+
+  // Accumulates ALL metering samples for the entire recording (no cap)
+  // Downsampled and persisted with the entry for playback waveform
+  const allAudioLevelsRef = useRef<number[]>([]);
 
   // Monitor app state to ensure recording continues in background
   useEffect(() => {
@@ -141,13 +146,17 @@ export const useRecorder = (): UseRecorderReturn => {
     meteringInterval.current = setInterval(() => {
       const state = recorderStateRef.current;
       if (state.isRecording && state.metering !== undefined) {
+        const db = state.metering ?? -160;
+        // Hard noise gate at -30dB — kills ambient room noise
+        // Map -30→0 dB to 0→1, power curve for natural spread
+        const normalized = db < -30
+          ? 0
+          : Math.pow(Math.min(1, (db + 30) / 30), 0.6);
+
+        // Accumulate every sample for playback waveform
+        allAudioLevelsRef.current.push(normalized);
+
         setAudioLevels(prev => {
-          const db = state.metering ?? -160;
-          // Hard noise gate at -30dB — kills ambient room noise
-          // Map -30→0 dB to 0→1, power curve for natural spread
-          const normalized = db < -30
-            ? 0
-            : Math.pow(Math.min(1, (db + 30) / 30), 0.6);
           // Grow from right until buffer is full, then shift left
           const next = prev.length < 50
             ? [...prev, normalized]
@@ -229,15 +238,19 @@ export const useRecorder = (): UseRecorderReturn => {
       // Get the recording URI
       const uri = audioRecorder.uri;
       
+      // Downsample full metering history to 200 samples for storage
+      const downsampledLevels = resampleLevels(allAudioLevelsRef.current, 200);
+
       // Save entry immediately (transcription will happen in background)
       await addEntry({
         date: new Date().toISOString(),
         title: 'Processing...',
-        text: '', 
+        text: '',
         rawText: '',
         duration,
         audioUri: uri || '',
         processingStage: 'transcribing',
+        audioLevels: downsampledLevels,
       });
       
       // Navigate to history to show the new entry

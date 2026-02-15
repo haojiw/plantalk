@@ -4,3 +4,5 @@ export {
     isRelativePath
 } from './audioPath';
 
+export { resampleLevels } from './audio';
+

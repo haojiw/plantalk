@@ -172,7 +172,7 @@ export default function EntryDetailScreen() {
           )}
           
           {/* Audio Player */}
-          <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} />
+          <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
           
           {/* Content based on processing stage */}
           <EntryContent

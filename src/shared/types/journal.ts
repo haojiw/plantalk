@@ -19,6 +19,7 @@ export interface JournalEntry {
     externalJobId?: string; // AssemblyAI job ID for idempotent resume
     lastError?: string; // Last error message for debugging
     backupText?: string; // Previous text version for manual refinement "Undo"
+    audioLevels?: number[]; // Normalized 0-1 amplitude samples for waveform display
   }
   
   export interface JournalState {
