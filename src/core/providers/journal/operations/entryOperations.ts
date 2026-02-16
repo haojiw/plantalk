@@ -1,4 +1,4 @@
-import { chunkText, textService, transcriptionService } from '@/core/services/ai';
+import { chatService, chunkText, textService, transcriptionService } from '@/core/services/ai';
 import { databaseService, dataValidationService } from '@/core/services/storage';
 import { JournalEntry, JournalState } from '@/shared/types';
 import { getAbsoluteAudioPath, getRelativeAudioPath } from '@/shared/utils';
@@ -363,6 +363,19 @@ export const refineEntry = async (
     }, 'completed');
 
     console.log('[entryOperations] Refinement completed successfully for entry:', entry.id);
+
+    // Non-blocking: trigger summary regeneration after refinement
+    (async () => {
+      try {
+        await databaseService.updateEntry(entry.id, { summaryStatus: 'generating' });
+        const summary = await chatService.generateSummary(finalRefinedText);
+        await databaseService.updateEntry(entry.id, { summary, summaryStatus: 'completed' });
+        console.log('[entryOperations] Summary regenerated for entry:', entry.id);
+      } catch (summaryError) {
+        console.error('[entryOperations] Summary regeneration failed:', summaryError);
+        await databaseService.updateEntry(entry.id, { summaryStatus: 'failed' });
+      }
+    })();
 
   } catch (error) {
     console.error('[entryOperations] Refinement failed:', error);

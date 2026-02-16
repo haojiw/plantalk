@@ -1,4 +1,4 @@
-import { JournalEntry, JournalState } from '@/shared/types';
+import { ChatMessage, JournalEntry, JournalState } from '@/shared/types';
 import { getAbsoluteAudioPath } from '@/shared/utils';
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -39,7 +39,7 @@ export interface TranscriptionOutboxEntry {
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private static readonly DB_NAME = 'plantalk.db';
-  private static readonly DB_VERSION = 3; // Bumped for audioLevels column
+  private static readonly DB_VERSION = 4; // Bumped for summary, summaryStatus, chat_messages
 
   // Initialize database connection and create tables
   async initialize(): Promise<void> {
@@ -95,6 +95,8 @@ class DatabaseService {
           lastError TEXT,
           backupText TEXT,
           audioLevels TEXT,
+          summary TEXT,
+          summaryStatus TEXT DEFAULT 'pending',
           createdAt TEXT NOT NULL,
           updatedAt TEXT NOT NULL,
           UNIQUE(entryId)
@@ -141,6 +143,20 @@ class DatabaseService {
       // Index for faster outbox queries
       await this.db.execAsync(`
         CREATE INDEX IF NOT EXISTS idx_outbox_status ON transcription_outbox(status);
+      `);
+
+      // Chat messages table
+      await this.db.execAsync(`
+        CREATE TABLE IF NOT EXISTS chat_messages (
+          id TEXT PRIMARY KEY,
+          entryId TEXT NOT NULL,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          createdAt TEXT NOT NULL
+        );
+      `);
+      await this.db.execAsync(`
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_entryId ON chat_messages(entryId);
       `);
 
       console.log('[DatabaseService] Tables created successfully');
@@ -203,6 +219,37 @@ class DatabaseService {
           }
         }
 
+        // Migration v3 -> v4: Add summary, summaryStatus columns and chat_messages table
+        if (currentVersion < 4) {
+          console.log('[DatabaseService] Migrating to v4: Adding summary, summaryStatus columns and chat_messages table');
+          try {
+            await this.db.execAsync('ALTER TABLE entries ADD COLUMN summary TEXT;');
+          } catch (e) {
+            console.log('[DatabaseService] summary column may already exist');
+          }
+          try {
+            await this.db.execAsync("ALTER TABLE entries ADD COLUMN summaryStatus TEXT DEFAULT 'pending';");
+          } catch (e) {
+            console.log('[DatabaseService] summaryStatus column may already exist');
+          }
+          try {
+            await this.db.execAsync(`
+              CREATE TABLE IF NOT EXISTS chat_messages (
+                id TEXT PRIMARY KEY,
+                entryId TEXT NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                createdAt TEXT NOT NULL
+              );
+            `);
+            await this.db.execAsync(`
+              CREATE INDEX IF NOT EXISTS idx_chat_messages_entryId ON chat_messages(entryId);
+            `);
+          } catch (e) {
+            console.log('[DatabaseService] chat_messages table may already exist');
+          }
+        }
+
         // Update database version
         await this.db.execAsync(`PRAGMA user_version = ${DatabaseService.DB_VERSION}`);
         console.log('[DatabaseService] Migrations completed');
@@ -232,8 +279,8 @@ class DatabaseService {
       // }
 
       await this.db.runAsync(`
-        INSERT INTO entries (entryId, date, title, text, rawText, audioUri, duration, processingStage, encrypted, audioLevels, createdAt, updatedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO entries (entryId, date, title, text, rawText, audioUri, duration, processingStage, encrypted, audioLevels, summary, summaryStatus, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         entry.id,
         entry.date,
@@ -245,6 +292,8 @@ class DatabaseService {
         entry.processingStage || 'completed',
         encrypted,
         entry.audioLevels ? JSON.stringify(entry.audioLevels) : null,
+        entry.summary || null,
+        entry.summaryStatus || 'pending',
         now,
         now
       ]);
@@ -303,6 +352,9 @@ class DatabaseService {
       // Get the entry to find audio file
       const entry = await this.getEntry(entryId);
       
+      // Delete associated chat messages
+      await this.db.runAsync('DELETE FROM chat_messages WHERE entryId = ?', [entryId]);
+
       // Delete from database
       await this.db.runAsync('DELETE FROM entries WHERE entryId = ?', [entryId]);
       
@@ -512,7 +564,67 @@ class DatabaseService {
       lastError: dbEntry.lastError ?? undefined,
       backupText: dbEntry.backupText ?? undefined,
       audioLevels: dbEntry.audioLevels ? JSON.parse(dbEntry.audioLevels as unknown as string) : undefined,
+      summary: (dbEntry as any).summary ?? undefined,
+      summaryStatus: (dbEntry as any).summaryStatus as JournalEntry['summaryStatus'],
     };
+  }
+
+  // Add a chat message to the database
+  async addChatMessage(msg: ChatMessage): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync(`
+        INSERT INTO chat_messages (id, entryId, role, content, createdAt)
+        VALUES (?, ?, ?, ?, ?)
+      `, [msg.id, msg.entryId, msg.role, msg.content, msg.createdAt]);
+
+      console.log(`[DatabaseService] Added chat message: ${msg.id}`);
+    } catch (error) {
+      console.error('[DatabaseService] Failed to add chat message:', error);
+      throw error;
+    }
+  }
+
+  // Get all chat messages for an entry, ordered by creation time
+  async getChatMessages(entryId: string): Promise<ChatMessage[]> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      const results = await this.db.getAllAsync<ChatMessage>(
+        'SELECT * FROM chat_messages WHERE entryId = ? ORDER BY createdAt ASC',
+        [entryId]
+      );
+      return results;
+    } catch (error) {
+      console.error('[DatabaseService] Failed to get chat messages:', error);
+      return [];
+    }
+  }
+
+  // Delete a single chat message by ID
+  async deleteChatMessage(messageId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync('DELETE FROM chat_messages WHERE id = ?', [messageId]);
+    } catch (error) {
+      console.error('[DatabaseService] Failed to delete chat message:', error);
+      throw error;
+    }
+  }
+
+  // Delete all chat messages for an entry
+  async deleteChatMessages(entryId: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    try {
+      await this.db.runAsync('DELETE FROM chat_messages WHERE entryId = ?', [entryId]);
+      console.log(`[DatabaseService] Deleted chat messages for entry: ${entryId}`);
+    } catch (error) {
+      console.error('[DatabaseService] Failed to delete chat messages:', error);
+      throw error;
+    }
   }
 
   // Create database backup
@@ -653,6 +765,8 @@ class DatabaseService {
       { name: 'lastError', definition: 'TEXT' },
       { name: 'backupText', definition: 'TEXT' },
       { name: 'audioLevels', definition: 'TEXT' },
+      { name: 'summary', definition: 'TEXT' },
+      { name: 'summaryStatus', definition: "TEXT DEFAULT 'pending'" },
     ];
 
     try {

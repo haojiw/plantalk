@@ -5,7 +5,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 interface EntryDetailHeaderProps {
   isEditing: boolean;
+  isChatActive?: boolean;
   onBackPress: () => void;
+  onChatToggle?: () => void;
   onCopy: () => void;
   onMorePress: () => void;
   onCancelEdit: () => void;
@@ -14,7 +16,9 @@ interface EntryDetailHeaderProps {
 
 export const EntryDetailHeader: React.FC<EntryDetailHeaderProps> = ({
   isEditing,
+  isChatActive = false,
   onBackPress,
+  onChatToggle,
   onCopy,
   onMorePress,
   onCancelEdit,
@@ -37,6 +41,18 @@ export const EntryDetailHeader: React.FC<EntryDetailHeaderProps> = ({
           </>
         ) : (
           <>
+            {onChatToggle && (
+              <Pressable
+                onPress={onChatToggle}
+                style={[styles.chatButton, isChatActive && styles.chatButtonActive]}
+              >
+                <Ionicons
+                  name={isChatActive ? 'chatbubble' : 'chatbubble-outline'}
+                  size={20}
+                  color={isChatActive ? theme.colors.surface : theme.colors.text}
+                />
+              </Pressable>
+            )}
             <Pressable onPress={onCopy} style={styles.copyButton}>
               <Ionicons name="copy-outline" size={24} color={theme.colors.text} />
             </Pressable>
@@ -85,6 +101,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  chatButton: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatButtonActive: {
+    backgroundColor: theme.colors.primary,
   },
   cancelButton: {
     width: 44,

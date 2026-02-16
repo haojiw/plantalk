@@ -20,8 +20,20 @@ export interface JournalEntry {
     lastError?: string; // Last error message for debugging
     backupText?: string; // Previous text version for manual refinement "Undo"
     audioLevels?: number[]; // Normalized 0-1 amplitude samples for waveform display
+
+    // Chat / summary fields
+    summary?: string; // AI-generated or passthrough summary
+    summaryStatus?: 'pending' | 'generating' | 'completed' | 'failed';
   }
   
+  export interface ChatMessage {
+    id: string;
+    entryId: string;
+    role: 'user' | 'assistant';
+    content: string;
+    createdAt: string; // ISO date string
+  }
+
   export interface JournalState {
     streak: number; // consecutive days
     lastEntryISO: string | null; // ISO date string of last entry

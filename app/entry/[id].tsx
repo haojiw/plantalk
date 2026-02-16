@@ -1,13 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { useAnimatedRef, useScrollViewOffset } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedRef,
+  useAnimatedStyle,
+  useScrollViewOffset,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { AudioPlayer } from '@/features/audio-player';
-import { EntryContent, EntryDetailHeader, useDateRevealAnimation, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
+import { ChatView, EntryContent, EntryDetailHeader, useDateRevealAnimation, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
 import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
@@ -17,10 +23,14 @@ export default function EntryDetailScreen() {
   const { state, updateEntry, retranscribeEntry, refineEntry } = useSecureJournal();
   const entry = state.entries.find(e => e.id === id);
 
-  // 2. Initialize all hooks
+  // 2. Tab state
+  const [activeTab, setActiveTab] = useState<'journal' | 'chat'>('journal');
+  const tabTransition = useSharedValue(0); // 0 = journal, 1 = chat
+
+  // 3. Initialize all hooks
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollViewOffset(scrollRef);
-  
+
   const {
     isEditing,
     editTitle,
@@ -32,32 +42,38 @@ export default function EntryDetailScreen() {
     handleCancelEdit,
   } = useEntryEditor({ entry, updateEntry });
 
-  const { showOptions } = useEntryOptions({ 
-    entry, 
+  const { showOptions } = useEntryOptions({
+    entry,
     updateEntry,
     retranscribeEntry,
     refineEntry,
-    onEditEntry: handleEditEntry 
+    onEditEntry: handleEditEntry
   });
 
   const { dateAnimatedStyle } = useDateRevealAnimation({ scrollOffset });
 
-  // Debug: Log entry details
-  console.log(`[EntryDetail] Entry found:`, {
-    id,
-    title: entry?.title,
-    processingStage: entry?.processingStage,
-    textLength: entry?.text?.length,
-    hasAudio: !!entry?.audioUri
-  });
+  // Tab crossfade animated styles
+  const journalBodyStyle = useAnimatedStyle(() => ({
+    opacity: 1 - tabTransition.value,
+  }));
+
+  const chatBodyStyle = useAnimatedStyle(() => ({
+    opacity: tabTransition.value,
+  }));
+
+  const handleChatToggle = useCallback(() => {
+    const newTab = activeTab === 'journal' ? 'chat' : 'journal';
+    setActiveTab(newTab);
+    tabTransition.value = withTiming(newTab === 'chat' ? 1 : 0, { duration: 200 });
+  }, [activeTab, tabTransition]);
 
   // Helper functions
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
-      month: 'long', 
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -81,7 +97,6 @@ export default function EntryDetailScreen() {
     if (!entry?.audioUri) return;
 
     try {
-      // Use consolidated "clean slate" retranscription that properly resets state
       await retranscribeEntry(entry);
       Alert.alert('Retry Started', 'We\'re processing your audio again. This may take a few moments.');
     } catch (error) {
@@ -94,7 +109,6 @@ export default function EntryDetailScreen() {
     if (!entry?.rawText) return;
 
     try {
-      // Use consolidated refineEntry - no backup for retry (already have the text)
       await refineEntry(entry, false);
       Alert.alert('Success', 'Text refinement completed!');
     } catch (error) {
@@ -116,7 +130,7 @@ export default function EntryDetailScreen() {
             onCancelEdit={() => {}}
             onSaveEdit={async () => {}}
           />
-          
+
           <View style={styles.errorContainer}>
             <Ionicons name="leaf-outline" size={48} color={theme.colors.primaryMuted40} />
             <Text style={styles.errorText}>Entry not found</Text>
@@ -126,37 +140,27 @@ export default function EntryDetailScreen() {
     );
   }
 
-  // 3. Render by composing components
+  // 4. Render with tab crossfade
   return (
     <ScreenWrapper>
-      <KeyboardAvoidingView 
-        style={styles.container} 
+      <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
       >
         <EntryDetailHeader
           isEditing={isEditing}
+          isChatActive={activeTab === 'chat'}
           onBackPress={handleBackPress}
+          onChatToggle={handleChatToggle}
           onCopy={handleCopyText}
           onMorePress={showOptions}
           onCancelEdit={handleCancelEdit}
           onSaveEdit={handleSaveEdit}
         />
 
-        <Animated.ScrollView 
-          ref={scrollRef}
-          style={styles.content}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          scrollEventThrottle={16}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Date - Hidden by default, reveals on overscroll */}
-          <Animated.Text style={[styles.date, dateAnimatedStyle]}>
-            {formatDate(entry.date)}
-          </Animated.Text>
-          
-          {/* Title */}
+        {/* Title - shared across both tabs */}
+        <View style={styles.titleContainer}>
           {isEditing ? (
             <TextInput
               style={styles.titleInput}
@@ -170,20 +174,51 @@ export default function EntryDetailScreen() {
           ) : (
             <Text style={styles.title}>{entry.title}</Text>
           )}
-          
-          {/* Audio Player */}
-          <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
-          
-          {/* Content based on processing stage */}
-          <EntryContent
-            entry={entry}
-            isEditing={isEditing}
-            editText={editText}
-            setEditText={setEditText}
-            onRetryTranscription={handleRetryTranscription}
-            onRetryRefinement={handleRetryRefinement}
-          />
-        </Animated.ScrollView>
+        </View>
+
+        {/* Tab content area */}
+        <View style={styles.tabContent}>
+          {/* Journal tab */}
+          <Animated.View
+            style={[styles.tabPane, journalBodyStyle]}
+            pointerEvents={activeTab === 'journal' ? 'auto' : 'none'}
+          >
+            <Animated.ScrollView
+              ref={scrollRef}
+              style={styles.content}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Date - Hidden by default, reveals on overscroll */}
+              <Animated.Text style={[styles.date, dateAnimatedStyle]}>
+                {formatDate(entry.date)}
+              </Animated.Text>
+
+              {/* Audio Player */}
+              <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
+
+              {/* Content based on processing stage */}
+              <EntryContent
+                entry={entry}
+                isEditing={isEditing}
+                editText={editText}
+                setEditText={setEditText}
+                onRetryTranscription={handleRetryTranscription}
+                onRetryRefinement={handleRetryRefinement}
+              />
+            </Animated.ScrollView>
+          </Animated.View>
+
+          {/* Chat tab */}
+          <Animated.View
+            style={[styles.tabPane, chatBodyStyle]}
+            pointerEvents={activeTab === 'chat' ? 'auto' : 'none'}
+          >
+            <ChatView entry={entry} />
+          </Animated.View>
+        </View>
       </KeyboardAvoidingView>
     </ScreenWrapper>
   );
@@ -192,6 +227,9 @@ export default function EntryDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  titleContainer: {
+    paddingHorizontal: theme.spacing.md,
   },
   content: {
     flex: 1,
@@ -219,6 +257,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingBottom: 0,
   },
+  tabContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  tabPane: {
+    ...StyleSheet.absoluteFillObject,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -229,4 +274,4 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted60,
     marginTop: theme.spacing.md,
   },
-}); 
+});

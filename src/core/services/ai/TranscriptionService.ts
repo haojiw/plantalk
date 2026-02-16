@@ -1,4 +1,5 @@
 import { databaseService } from '@/core/services/storage';
+import { chatService } from './ChatService';
 import { speechService, SpeechServiceFileError } from './SpeechService';
 import { textService } from './TextService';
 
@@ -345,6 +346,9 @@ class TranscriptionService {
       console.log(`[TranscriptionService] Processing completed successfully for entry ${task.entryId}`);
       task.onComplete(task.entryId, finalResult, 'completed');
 
+      // Non-blocking: trigger summary generation after successful transcription
+      this.generateSummaryForEntry(task.entryId, finalRefinedText);
+
     } catch (error) {
       console.error(`[TranscriptionService] Unexpected error during processing for entry ${task.entryId}:`, error);
       
@@ -370,6 +374,28 @@ class TranscriptionService {
     } finally {
       // Always remove from active set when task completes (success or failure)
       this.activeTaskIds.delete(task.entryId);
+    }
+  }
+
+  /**
+   * @brief Non-blocking summary generation after transcription completes.
+   * Updates the entry's summary and summaryStatus fields.
+   */
+  private async generateSummaryForEntry(entryId: string, text: string): Promise<void> {
+    try {
+      console.log(`[TranscriptionService] Starting summary generation for entry ${entryId}`);
+      await databaseService.updateEntry(entryId, { summaryStatus: 'generating' });
+
+      const summary = await chatService.generateSummary(text);
+
+      await databaseService.updateEntry(entryId, {
+        summary,
+        summaryStatus: 'completed',
+      });
+      console.log(`[TranscriptionService] Summary generated for entry ${entryId}`);
+    } catch (error) {
+      console.error(`[TranscriptionService] Summary generation failed for entry ${entryId}:`, error);
+      await databaseService.updateEntry(entryId, { summaryStatus: 'failed' });
     }
   }
 
