@@ -1,20 +1,40 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
+import { ScreenWrapper } from '@/shared/components';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const BillingScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   const handleBack = () => {
     router.back();
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper withPadding={false}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -39,23 +59,18 @@ export const BillingScreen: React.FC = () => {
         </View>
         <Text style={styles.statusText}>You're currently on the Pro plan</Text>
       </View>
-    </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: theme.spacing.xs,

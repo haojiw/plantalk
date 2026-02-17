@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     minHeight: 52,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: theme.colors.textMuted10,
   },
   pressed: {
     backgroundColor: theme.colors.background,

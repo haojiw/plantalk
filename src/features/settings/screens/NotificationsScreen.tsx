@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -10,9 +10,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSettings } from '@/core/providers/settings';
+import { ScreenWrapper } from '@/shared/components';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 const DAYS = [
@@ -38,7 +43,21 @@ const TIME_OPTIONS = [
 ];
 
 export const NotificationsScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   const {
     settings,
     setWeeklyRecapEnabled,
@@ -74,7 +93,8 @@ export const NotificationsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper withPadding={false}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -86,7 +106,7 @@ export const NotificationsScreen: React.FC = () => {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
         {/* Weekly Recap Section */}
         <View style={styles.section}>
@@ -204,23 +224,18 @@ export const NotificationsScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-    </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -247,9 +262,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.textMuted10,
     marginHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
     overflow: 'hidden',
   },
   toggleRow: {

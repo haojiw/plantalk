@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -11,14 +11,34 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useSettings } from '@/core/providers/settings';
+import { ScreenWrapper } from '@/shared/components';
 import { defaults } from '@/styles/assets';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const ProfileScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   const { settings, setDisplayName, setAvatarUri } = useSettings();
   const [name, setName] = useState(settings.displayName);
   const [isSaving, setIsSaving] = useState(false);
@@ -70,7 +90,8 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper withPadding={false}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -86,55 +107,62 @@ export const ProfileScreen: React.FC = () => {
         </Pressable>
       </View>
 
-      {/* Avatar Section */}
-      <View style={styles.avatarSection}>
-        <Pressable onPress={handlePickImage} style={styles.avatarContainer}>
-          <Image
-            source={
-              settings.avatarUri
-                ? { uri: settings.avatarUri }
-                : defaults.mascot
-            }
-            style={styles.avatar}
-            contentFit="cover"
-          />
-          <View style={styles.editBadge}>
-            <Ionicons name="camera" size={16} color="white" />
-          </View>
-        </Pressable>
-        <Text style={styles.avatarHint}>Tap to change photo</Text>
-      </View>
+      {/* Profile Card */}
+      <View style={styles.card}>
+        {/* Avatar Section */}
+        <View style={styles.avatarSection}>
+          <Pressable onPress={handlePickImage} style={styles.avatarContainer}>
+            <Image
+              source={
+                settings.avatarUri
+                  ? { uri: settings.avatarUri }
+                  : defaults.mascot
+              }
+              style={styles.avatar}
+              contentFit="cover"
+            />
+            <View style={styles.editBadge}>
+              <Ionicons name="camera" size={16} color="white" />
+            </View>
+          </Pressable>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
+        </View>
 
-      {/* Name Input */}
-      <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>Display Name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter your name"
-          placeholderTextColor={theme.colors.textMuted40}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
+        {/* Name Input */}
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>Display Name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your name"
+            placeholderTextColor={theme.colors.textMuted40}
+            autoCapitalize="words"
+            autoCorrect={false}
+          />
+        </View>
       </View>
-    </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  },
+  card: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.textMuted10,
+    borderRadius: theme.borderRadius.lg,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    overflow: 'hidden',
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -189,7 +217,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   inputSection: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
   },
   inputLabel: {

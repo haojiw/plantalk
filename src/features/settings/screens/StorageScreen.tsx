@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,9 +11,15 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
+import { ScreenWrapper } from '@/shared/components';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 interface StorageInfo {
@@ -31,7 +37,21 @@ function formatBytes(bytes: number): string {
 }
 
 export const StorageScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   const { state } = useSecureJournal();
   const [storageInfo, setStorageInfo] = useState<StorageInfo>({
     audioSize: 0,
@@ -117,7 +137,8 @@ export const StorageScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper withPadding={false}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -186,23 +207,18 @@ export const StorageScreen: React.FC = () => {
           </>
         )}
       </View>
-    </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -225,11 +241,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.textMuted10,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.lg,
     alignItems: 'center',
-    ...theme.shadows.sm,
   },
   statValue: {
     ...theme.typography.heading,

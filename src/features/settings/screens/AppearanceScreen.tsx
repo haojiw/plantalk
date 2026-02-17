@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
-import React from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -10,14 +10,34 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { useSettings } from '@/core/providers/settings';
+import { ScreenWrapper } from '@/shared/components';
 import { illustrationOptions } from '@/styles/assets';
+import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const AppearanceScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
+  const opacity = useSharedValue(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
+      return () => {
+        opacity.value = 0;
+      };
+    }, [])
+  );
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   const { settings, setMainIllustration } = useSettings();
 
   const handleBack = () => {
@@ -30,7 +50,8 @@ export const AppearanceScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <ScreenWrapper withPadding={false}>
+      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -42,7 +63,7 @@ export const AppearanceScreen: React.FC = () => {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Main Illustration</Text>
@@ -85,23 +106,18 @@ export const AppearanceScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-    </View>
+      </Animated.View>
+    </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -137,13 +153,13 @@ const styles = StyleSheet.create({
   illustrationCard: {
     width: '47%',
     aspectRatio: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: theme.colors.textMuted10,
     position: 'relative',
   },
   illustrationCardActive: {

@@ -30,8 +30,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
   },
   content: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.textMuted10,
+    borderRadius: theme.borderRadius.lg,
     marginHorizontal: theme.spacing.md,
     overflow: 'hidden',
   },
