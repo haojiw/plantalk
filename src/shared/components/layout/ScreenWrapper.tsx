@@ -9,6 +9,7 @@ interface ScreenWrapperProps {
   children: React.ReactNode;
   style?: ViewStyle;
   withPadding?: boolean;
+  isModal?: boolean;
   statusBarStyle?: 'auto' | 'inverted' | 'light' | 'dark';
 }
 
@@ -16,6 +17,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   children,
   style,
   withPadding = true,
+  isModal = false,
   statusBarStyle = 'dark',
 }) => {
   const insets = useSafeAreaInsets();
@@ -39,7 +41,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
             style={[
               styles.content,
               {
-                paddingTop: insets.top,
+                paddingTop: isModal ? theme.spacing.sm : insets.top,
                 paddingBottom: insets.bottom,
                 paddingHorizontal: withPadding ? theme.screenWrapper.padding : 0,
               },

@@ -1,11 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -15,17 +14,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import { ScreenWrapper } from '@/shared/components';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { useSettings } from '@/core/providers/settings';
 import { SettingsRow, SettingsSection } from '@/features/settings';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 const THEME_LABELS: Record<string, string> = {
@@ -48,21 +41,6 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 export default function SettingsScreen() {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const { settings, setTheme } = useSettings();
   const { state, addEntry } = useSecureJournal();
   const [isExporting, setIsExporting] = useState(false);
@@ -184,15 +162,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+    <ScreenWrapper isModal withPadding={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-        </Pressable>
         <Text style={styles.title}>Settings</Text>
-        <View style={styles.placeholder} />
+        <Pressable onPress={() => router.back()} style={styles.doneButton}>
+          <Text style={styles.doneButtonText}>Done</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -302,7 +278,6 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
-      </Animated.View>
     </ScreenWrapper>
   );
 }
@@ -315,15 +290,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
   },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
   title: {
     ...theme.typography.heading,
     color: theme.colors.text,
   },
-  placeholder: {
-    width: 32,
+  doneButton: {
+    padding: theme.spacing.xs,
+  },
+  doneButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,

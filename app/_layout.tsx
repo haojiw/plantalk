@@ -96,6 +96,8 @@ function RootLayoutNav() {
         name="settings"
         options={{
           headerShown: false,
+          presentation: 'modal',
+          animation: 'default',
         }}
       />
       <Stack.Screen name="+not-found" />
