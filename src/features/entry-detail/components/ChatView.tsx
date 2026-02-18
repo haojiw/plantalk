@@ -1,5 +1,4 @@
 import { useSecureJournal } from '@/core/providers/journal';
-import { AudioPlayer } from '@/features/audio-player';
 import { JournalEntry } from '@/shared/types';
 import { theme } from '@/styles/theme';
 import React, { useEffect, useRef } from 'react';
@@ -48,9 +47,6 @@ export const ChatView: React.FC<ChatViewProps> = ({ entry }) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Audio Player */}
-        <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
-
         {/* Processing note */}
         {entry.processingStage !== 'completed' && (
           <View style={styles.pendingSection}>

@@ -1,35 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, {
-  useAnimatedRef,
-  useAnimatedStyle,
-  useScrollViewOffset,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { AudioPlayer } from '@/features/audio-player';
-import { ChatView, EntryContent, EntryDetailHeader, useDateRevealAnimation, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
+import { ChatInput, ChatMessageBubble, EntryContent, EntryDetailHeader, TypingIndicator, useEntryChat, useEntryEditor, useEntryOptions } from '@/features/entry-detail';
 import { ScreenWrapper } from '@/shared/components';
 import { theme } from '@/styles/theme';
 
 export default function EntryDetailScreen() {
-  // 1. Get entry and context functions
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, updateEntry, retranscribeEntry, refineEntry } = useSecureJournal();
   const entry = state.entries.find(e => e.id === id);
 
-  // 2. Tab state
   const [activeTab, setActiveTab] = useState<'journal' | 'chat'>('journal');
-  const tabTransition = useSharedValue(0); // 0 = journal, 1 = chat
-
-  // 3. Initialize all hooks
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const scrollOffset = useScrollViewOffset(scrollRef);
+  const scrollRef = useRef<ScrollView>(null);
+  const contentOpacity = useSharedValue(1);
+  const contentAnimatedStyle = useAnimatedStyle(() => ({ opacity: contentOpacity.value }));
 
   const {
     isEditing,
@@ -50,34 +40,44 @@ export default function EntryDetailScreen() {
     onEditEntry: handleEditEntry
   });
 
-  const { dateAnimatedStyle } = useDateRevealAnimation({ scrollOffset });
+  const {
+    messages,
+    isLoadingMessages,
+    sendMessage,
+    retryMessage,
+    isWaitingForResponse,
+  } = useEntryChat({ entry: entry!, updateEntry });
 
-  // Tab crossfade animated styles
-  const journalBodyStyle = useAnimatedStyle(() => ({
-    opacity: 1 - tabTransition.value,
-  }));
+  // Filter: hide the first user message (it's the entry text, already visible in journal tab)
+  const visibleMessages = messages.length > 0 && messages[0].role === 'user'
+    ? messages.slice(1)
+    : messages;
 
-  const chatBodyStyle = useAnimatedStyle(() => ({
-    opacity: tabTransition.value,
-  }));
+  // Auto-scroll to bottom on new chat messages
+  useEffect(() => {
+    if (activeTab === 'chat' && (messages.length > 0 || isWaitingForResponse)) {
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length, isWaitingForResponse, activeTab]);
 
   const handleChatToggle = useCallback(() => {
-    const newTab = activeTab === 'journal' ? 'chat' : 'journal';
-    setActiveTab(newTab);
-    tabTransition.value = withTiming(newTab === 'chat' ? 1 : 0, { duration: 200 });
-  }, [activeTab, tabTransition]);
+    contentOpacity.value = withTiming(0, { duration: 120 }, () => {
+      // Content is invisible — safe to swap
+    });
+    setTimeout(() => {
+      setActiveTab(prev => prev === 'journal' ? 'chat' : 'journal');
+      contentOpacity.value = withTiming(1, { duration: 180 });
+    }, 120);
+  }, [contentOpacity]);
 
-  // Helper functions
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${weekday}, ${month}/${day}`;
   };
 
   const handleCopyText = async () => {
@@ -140,7 +140,6 @@ export default function EntryDetailScreen() {
     );
   }
 
-  // 4. Render with tab crossfade
   return (
     <ScreenWrapper>
       <KeyboardAvoidingView
@@ -159,8 +158,17 @@ export default function EntryDetailScreen() {
           onSaveEdit={handleSaveEdit}
         />
 
-        {/* Title - shared across both tabs */}
-        <View style={styles.titleContainer}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Date */}
+          <Text style={styles.date}>{formatDate(entry.date)}</Text>
+
+          {/* Title */}
           {isEditing ? (
             <TextInput
               style={styles.titleInput}
@@ -174,32 +182,13 @@ export default function EntryDetailScreen() {
           ) : (
             <Text style={styles.title}>{entry.title}</Text>
           )}
-        </View>
 
-        {/* Tab content area */}
-        <View style={styles.tabContent}>
-          {/* Journal tab */}
-          <Animated.View
-            style={[styles.tabPane, journalBodyStyle]}
-            pointerEvents={activeTab === 'journal' ? 'auto' : 'none'}
-          >
-            <Animated.ScrollView
-              ref={scrollRef}
-              style={styles.content}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-              scrollEventThrottle={16}
-              keyboardShouldPersistTaps="handled"
-            >
-              {/* Date - Hidden by default, reveals on overscroll */}
-              <Animated.Text style={[styles.date, dateAnimatedStyle]}>
-                {formatDate(entry.date)}
-              </Animated.Text>
+          {/* Audio Player */}
+          <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
 
-              {/* Audio Player */}
-              <AudioPlayer audioUri={entry.audioUri} duration={entry.duration} audioLevels={entry.audioLevels} />
-
-              {/* Content based on processing stage */}
+          {/* Tab content with fade animation */}
+          <Animated.View style={contentAnimatedStyle}>
+            {activeTab === 'journal' ? (
               <EntryContent
                 entry={entry}
                 isEditing={isEditing}
@@ -208,17 +197,41 @@ export default function EntryDetailScreen() {
                 onRetryTranscription={handleRetryTranscription}
                 onRetryRefinement={handleRetryRefinement}
               />
-            </Animated.ScrollView>
-          </Animated.View>
+            ) : (
+              <View>
+                {entry.processingStage !== 'completed' && (
+                  <View style={styles.pendingSection}>
+                    <Text style={styles.pendingText}>AI chat will be available after processing completes.</Text>
+                  </View>
+                )}
 
-          {/* Chat tab */}
-          <Animated.View
-            style={[styles.tabPane, chatBodyStyle]}
-            pointerEvents={activeTab === 'chat' ? 'auto' : 'none'}
-          >
-            <ChatView entry={entry} />
+                {isLoadingMessages ? (
+                  <ActivityIndicator size="small" color={theme.colors.primary} style={styles.loadingMessages} />
+                ) : (
+                  visibleMessages.map(msg => (
+                    <ChatMessageBubble
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                      onRetry={msg.role === 'assistant' ? () => retryMessage(msg.id) : undefined}
+                    />
+                  ))
+                )}
+
+                {isWaitingForResponse && <TypingIndicator />}
+              </View>
+            )}
           </Animated.View>
-        </View>
+        </ScrollView>
+
+        {/* Chat input - fixed at bottom when chat tab is active */}
+        {activeTab === 'chat' && (
+          <ChatInput
+            onSend={sendMessage}
+            isSending={isWaitingForResponse}
+            disabled={entry.processingStage !== 'completed'}
+          />
+        )}
       </KeyboardAvoidingView>
     </ScreenWrapper>
   );
@@ -228,20 +241,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  titleContainer: {
-    paddingHorizontal: theme.spacing.md,
-  },
-  content: {
+  scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: theme.spacing.xxl,
     paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xxl,
   },
   date: {
     ...theme.typography.caption,
+    fontFamily: theme.fonts.handwriting,
     color: theme.colors.primary,
-    fontWeight: '600',
     marginBottom: theme.spacing.sm,
   },
   title: {
@@ -257,12 +267,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingBottom: 0,
   },
-  tabContent: {
-    flex: 1,
-    position: 'relative',
+  pendingSection: {
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xs,
   },
-  tabPane: {
-    ...StyleSheet.absoluteFillObject,
+  pendingText: {
+    ...theme.typography.caption,
+    color: theme.colors.textMuted40,
+    fontStyle: 'italic',
+  },
+  loadingMessages: {
+    marginTop: theme.spacing.lg,
   },
   errorContainer: {
     flex: 1,
