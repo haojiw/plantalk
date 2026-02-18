@@ -30,6 +30,7 @@
     "@react-navigation/drawer": "^7.7.13",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@shopify/react-native-skia": "2.2.12",
     "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.0",
