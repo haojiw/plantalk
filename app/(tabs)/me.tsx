@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -12,9 +13,6 @@ import {
 import Animated, {
     FadeIn,
     FadeOut,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
 } from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
@@ -26,21 +24,11 @@ import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export default function MeScreen() {
-  const opacity = useSharedValue(0);
   const { settings } = useSettings();
   const { state } = useSecureJournal();
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  
-  const entryCount = state.entries.length;
 
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
+  const entryCount = state.entries.length;
 
   const toggleCard = (cardId: string) => {
     setExpandedCards(prev => {
@@ -53,10 +41,6 @@ export default function MeScreen() {
       return newSet;
     });
   };
-
-  const containerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
 
   const renderExpandableCard = (
     id: string,
@@ -99,7 +83,7 @@ export default function MeScreen() {
 
   return (
     <ScreenWrapper>
-      <Animated.ScrollView style={[styles.container, containerAnimatedStyle]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           
@@ -192,7 +176,7 @@ export default function MeScreen() {
         </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
-      </Animated.ScrollView>
+      </ScrollView>
     </ScreenWrapper>
   );
 }

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,15 +11,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { ScreenWrapper } from '@/shared/components';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 interface StorageInfo {
@@ -37,21 +31,6 @@ function formatBytes(bytes: number): string {
 }
 
 export const StorageScreen: React.FC = () => {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const { state } = useSecureJournal();
   const [storageInfo, setStorageInfo] = useState<StorageInfo>({
     audioSize: 0,
@@ -138,7 +117,7 @@ export const StorageScreen: React.FC = () => {
 
   return (
     <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -207,7 +186,7 @@ export const StorageScreen: React.FC = () => {
           </>
         )}
       </View>
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 };

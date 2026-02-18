@@ -1,18 +1,12 @@
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
-} from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { HistoryList } from '@/features/journal';
 import { ScreenWrapper } from '@/shared/components';
 import { JournalEntry } from '@/shared/types';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 interface SectionData {
@@ -23,17 +17,7 @@ interface SectionData {
 export default function JournalScreen() {
   const { state, deleteEntry } = useSecureJournal();
   const [swipedEntryId, setSwipedEntryId] = useState<string | null>(null);
-  const opacity = useSharedValue(0);
 
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-  
   const handleOutsideInteraction = () => {
     if (swipedEntryId !== null) {
       setSwipedEntryId(null);
@@ -129,13 +113,9 @@ export default function JournalScreen() {
     }
   };
 
-  const containerAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   return (
     <ScreenWrapper>
-      <Animated.View style={[styles.container, containerAnimatedStyle]}>
+      <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Journal</Text>
@@ -152,7 +132,7 @@ export default function JournalScreen() {
           onScroll={handleScroll}
           entriesCount={state.entries.length}
         />
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 }

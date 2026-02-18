@@ -10,7 +10,6 @@ export const motion = {
   },
 
   durations: {
-    screenFadeIn: 200,
     cardEnter: 300,
     cardExit: 200,
     processingPulse: 800,
@@ -18,6 +17,7 @@ export const motion = {
     deleteFade: 200,
     waveformBar: { min: 90, max: 130 },
     waveformIdle: 300,
+    rippleExpand: 800,
   },
 
   layoutAnimations: {
@@ -26,8 +26,9 @@ export const motion = {
   },
 
   screenTransitions: {
-    rootStack: 'none' as const,
-    settingsStack: 'none' as const,
+    rootStack: 'fade' as const,
+    settingsStack: 'fade' as const,
+    fadeDuration: 300,
   },
 
   gestureThresholds: {

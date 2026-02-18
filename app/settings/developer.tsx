@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -10,35 +9,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { SettingsRow, SettingsSection } from '@/features/settings';
 import { ScreenWrapper } from '@/shared/components';
 import { getRelativeAudioPath, isRelativePath } from '@/shared/utils';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export default function DeveloperScreen() {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const { state, isLoading: contextLoading, updateEntry, runStorageDiagnostics, runSchemaMigration } = useSecureJournal();
   const [isMigrating, setIsMigrating] = useState(false);
   const [isDiagnosing, setIsDiagnosing] = useState(false);
@@ -187,7 +165,7 @@ export default function DeveloperScreen() {
 
   return (
     <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -241,7 +219,7 @@ export default function DeveloperScreen() {
           </Text>
         </View>
       </ScrollView>
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 }

@@ -67,6 +67,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{
       headerShown: false,
       animation: motion.screenTransitions.rootStack,
+      animationDuration: motion.screenTransitions.fadeDuration,
       contentStyle: {
         backgroundColor: effectiveTheme === 'dark' ? '#1a1a1a' : theme.colors.background
       },
@@ -88,6 +89,7 @@ function RootLayoutNav() {
       <Stack.Screen
         name="entry/[id]"
         options={{
+          animation: 'slide_from_right',
           headerShown: false,
         }}
       />
@@ -95,6 +97,7 @@ function RootLayoutNav() {
       <Stack.Screen
         name="settings"
         options={{
+          animation: 'slide_from_bottom',
           headerShown: false,
         }}
       />

@@ -3,9 +3,9 @@ import Constants from 'expo-constants';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -15,17 +15,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import { ScreenWrapper } from '@/shared/components';
 
 import { useSecureJournal } from '@/core/providers/journal';
 import { useSettings } from '@/core/providers/settings';
 import { SettingsRow, SettingsSection } from '@/features/settings';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 const THEME_LABELS: Record<string, string> = {
@@ -48,21 +42,6 @@ const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 export default function SettingsScreen() {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const { settings, setTheme } = useSettings();
   const { state, addEntry } = useSecureJournal();
   const [isExporting, setIsExporting] = useState(false);
@@ -185,7 +164,7 @@ export default function SettingsScreen() {
 
   return (
     <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -302,7 +281,7 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 }

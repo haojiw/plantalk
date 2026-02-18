@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -11,34 +11,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-
 import { useSettings } from '@/core/providers/settings';
 import { ScreenWrapper } from '@/shared/components';
 import { defaults } from '@/styles/assets';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const ProfileScreen: React.FC = () => {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const { settings, setDisplayName, setAvatarUri } = useSettings();
   const [name, setName] = useState(settings.displayName);
   const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +69,7 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -142,7 +120,7 @@ export const ProfileScreen: React.FC = () => {
           />
         </View>
       </View>
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 };

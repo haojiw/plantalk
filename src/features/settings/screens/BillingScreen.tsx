@@ -1,40 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback } from 'react';
+import { router } from 'expo-router';
+import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { ScreenWrapper } from '@/shared/components';
-import { motion } from '@/styles/motion';
 import { theme } from '@/styles/theme';
 
 export const BillingScreen: React.FC = () => {
-  const opacity = useSharedValue(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      opacity.value = withTiming(1, { duration: motion.durations.screenFadeIn });
-      return () => {
-        opacity.value = 0;
-      };
-    }, [])
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
-
   const handleBack = () => {
     router.back();
   };
 
   return (
     <ScreenWrapper withPadding={false}>
-      <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={{ flex: 1 }}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={handleBack} style={styles.backButton}>
@@ -59,7 +38,7 @@ export const BillingScreen: React.FC = () => {
         </View>
         <Text style={styles.statusText}>You're currently on the Pro plan</Text>
       </View>
-      </Animated.View>
+      </View>
     </ScreenWrapper>
   );
 };
